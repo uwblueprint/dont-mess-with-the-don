@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.entity import Entity, EntityCreate, EntityUpdate
+
 
 class IEntityService(ABC):
     """
@@ -7,53 +11,23 @@ class IEntityService(ABC):
     """
 
     @abstractmethod
-    def get_entities(self):
-        """Return a list of all entities
-
-        :return: A list of dictionaries from Entity objects
-        :rtype: list of dictionaries
-        """
+    async def get_entities(self, session: AsyncSession) -> list[Entity]:
         pass
 
     @abstractmethod
-    def get_entity(self, id):
-        """Return a dictionary from the Entity object based on id
-
-        :param id: Entity id
-        :return: dictionary of Entity object
-        :rtype: dictionary
-        :raises Exception: id retrieval fails
-        """
+    async def get_entity(self, session: AsyncSession, entity_id: int) -> Entity | None:
         pass
 
     @abstractmethod
-    def create_entity(self, entity):
-        """Create a new Entity object
-
-        :param entity: dictionary of entity fields
-        :return: dictionary of Entity object
-        :rtype: dictionary
-        :raises Exception: if entity fields are invalid
-        """
+    async def create_entity(self, session: AsyncSession, entity_data: EntityCreate) -> Entity:
         pass
 
     @abstractmethod
-    def update_entity(self, id, entity):
-        """Update existing entity
-
-        :param entity: dictionary of entity fields
-        :param id: Entity id
-        :return: dictionary of Entity object
-        :rtype: dictionary
-        """
+    async def update_entity(
+        self, session: AsyncSession, entity_id: int, entity_data: EntityUpdate
+    ) -> Entity | None:
         pass
 
     @abstractmethod
-    def delete_entity(self, id):
-        """Delete existing entity
-
-        :param id: Entity id
-        :return: id of the Entity deleted
-        :rtype: integer
-        """
+    async def delete_entity(self, session: AsyncSession, entity_id: int) -> bool:
         pass

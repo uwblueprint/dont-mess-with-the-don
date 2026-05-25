@@ -1,24 +1,89 @@
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
+import os
+from collections.abc import AsyncGenerator
+from typing import Any
 
-db = SQLAlchemy()
-migrate = Migrate()
+from sqlalchemy import Engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlmodel import SQLModel, create_engine
+
+# Database engines
+engine: Engine | None = None
+async_engine: AsyncEngine | None = None
+async_session_maker_instance: async_sessionmaker[AsyncSession] | None = None
 
 
-def init_app(app):
-    from .entity import Entity
-    from .simple_entity import SimpleEntity
+def get_database_url() -> str:
+    """Get database URL based on environment"""
+    if os.getenv("APP_ENV") == "production":
+        return os.getenv("DATABASE_URL", "").replace(
+            "postgresql://", "postgresql+asyncpg://"
+        )
+    else:
+        return "postgresql+asyncpg://{username}:{password}@{host}:5432/{db}".format(
+            username=os.getenv("POSTGRES_USER"),
+            password=os.getenv("POSTGRES_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            db=(
+                os.getenv("POSTGRES_DB_TEST")
+                if os.getenv("APP_ENV") == "testing"
+                else os.getenv("POSTGRES_DB_DEV")
+            ),
+        )
 
-    app.app_context().push()
-    db.init_app(app)
-    migrate.init_app(app, db)
 
-    erase_db_and_sync = app.config["TESTING"]
+def init_database() -> None:
+    """Initialize database engines and session makers"""
+    global engine, async_engine, async_session_maker_instance
 
-    if erase_db_and_sync:
-        # drop tables
-        db.reflect()
-        db.drop_all()
+    database_url = get_database_url()
+    sync_database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
 
-        # recreate tables
-        db.create_all()
+    app_env = os.getenv("APP_ENV", "development")
+    echo_sql = app_env in ("development", "testing")
+
+    # Synchronous engine for migrations
+    engine = create_engine(sync_database_url, echo=echo_sql)
+
+    # Asynchronous engine for application
+    async_engine = create_async_engine(database_url, echo=echo_sql)
+
+    # Async session maker
+    async_session_maker_instance = async_sessionmaker(
+        async_engine, expire_on_commit=False
+    )
+
+
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency to get database session"""
+    if async_session_maker_instance is None:
+        raise RuntimeError("Database not initialized. Call init_database() first.")
+    async with async_session_maker_instance() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+def create_db_and_tables() -> None:
+    """Create database tables - used in testing"""
+    if engine is None:
+        raise RuntimeError("Database not initialized. Call init_database() first.")
+    SQLModel.metadata.create_all(engine)
+
+
+def init_app(_app: Any | None = None) -> None:
+    """Initialize database for the application"""
+    # Import models to register them with SQLModel
+    from .entity import Entity  # noqa: F401
+    from .simple_entity import SimpleEntity  # noqa: F401
+
+    init_database()
+
+    # Create tables if in testing mode
+    if os.getenv("APP_ENV") == "testing":
+        create_db_and_tables()

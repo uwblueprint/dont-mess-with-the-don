@@ -1,4 +1,15 @@
-from . import db
+from enum import Enum
 
-enum = db.Enum("A", "B", "C", "D", name="enum")
-simple_entity_enum = db.Enum("A", "B", "C", "D", name="simple_entity_enum")
+
+class EntityEnum(str, Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+
+
+class SimpleEntityEnum(str, Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"

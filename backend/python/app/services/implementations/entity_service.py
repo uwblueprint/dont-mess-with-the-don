@@ -1,56 +1,90 @@
-from ...models.entity import Entity
-from ...models import db
-from ..interfaces.entity_service import IEntityService
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+from app.models.entity import Entity, EntityCreate, EntityUpdate
 
 
-class EntityService(IEntityService):
-    def __init__(self, logger):
+class EntityService:
+    """Service for managing entities"""
+
+    def __init__(self, logger: logging.Logger):
         self.logger = logger
 
-    def get_entities(self):
-        # Entity is a SQLAlchemy model, we can use convenient methods provided
-        # by SQLAlchemy like query.all() to query the data
-        return [result.to_dict() for result in Entity.query.all()]
+    async def get_entities(self, session: AsyncSession) -> list[Entity]:
+        """Get all entities"""
+        statement = select(Entity)
+        result = await session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_entity(self, id):
-        # get queries by the primary key, which is id for the Entity table
-        entity = Entity.query.get(id)
-        if entity is None:
-            self.logger.error("Invalid id")
-            raise Exception("Invalid id")
-        return entity.to_dict()
+    async def get_entity(self, session: AsyncSession, entity_id: int) -> Entity | None:
+        """Get entity by ID"""
+        statement = select(Entity).where(Entity.id == entity_id)
+        result = await session.execute(statement)
+        entity = result.scalars().first()
 
-    def create_entity(self, entity):
+        if not entity:
+            self.logger.error(f"Entity with id {entity_id} not found")
+            return None
+
+        return entity
+
+    async def create_entity(
+        self, session: AsyncSession, entity_data: EntityCreate
+    ) -> Entity:
+        """Create new entity"""
         try:
-            new_entity = Entity(**entity.__dict__)
+            entity = Entity(**entity_data.model_dump())
+            session.add(entity)
+            await session.commit()
+            await session.refresh(entity)
+            return entity
         except Exception as error:
-            self.logger.error(str(error))
+            self.logger.error(f"Failed to create entity: {error!s}")
+            await session.rollback()
             raise error
 
-        db.session.add(new_entity)
-        # remember to commit to actually persist into the database
-        db.session.commit()
+    async def update_entity(
+        self, session: AsyncSession, entity_id: int, entity_data: EntityUpdate
+    ) -> Entity | None:
+        """Update existing entity"""
+        try:
+            statement = select(Entity).where(Entity.id == entity_id)
+            result = await session.execute(statement)
+            entity = result.scalars().first()
 
-        return new_entity.to_dict()
+            if not entity:
+                self.logger.error(f"Entity with id {entity_id} not found")
+                return None
 
-    def update_entity(self, id, entity):
-        Entity.query.filter_by(id=id).update(entity.__dict__)
-        updated_entity = Entity.query.get(id)
-        db.session.commit()
+            update_data = entity_data.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(entity, field, value)
 
-        if updated_entity is None:
-            self.logger.error("Invalid id")
-            raise Exception("Invalid id")
-        return updated_entity.to_dict()
+            await session.commit()
+            await session.refresh(entity)
+            return entity
+        except Exception as error:
+            self.logger.error(f"Failed to update entity: {error!s}")
+            await session.rollback()
+            raise error
 
-    def delete_entity(self, id):
-        deleted = Entity.query.filter_by(id=id).delete()
-        db.session.commit()
+    async def delete_entity(self, session: AsyncSession, entity_id: int) -> bool:
+        """Delete entity by ID"""
+        try:
+            statement = select(Entity).where(Entity.id == entity_id)
+            result = await session.execute(statement)
+            entity = result.scalars().first()
 
-        # deleted is the number of rows deleted
-        if deleted == 1:
-            return id
+            if not entity:
+                self.logger.error(f"Entity with id {entity_id} not found")
+                return False
 
-        self.logger.error("Invalid id")
-        raise Exception("Invalid id")
-
+            await session.delete(entity)
+            await session.commit()
+            return True
+        except Exception as error:
+            self.logger.error(f"Failed to delete entity: {error!s}")
+            await session.rollback()
+            raise error
