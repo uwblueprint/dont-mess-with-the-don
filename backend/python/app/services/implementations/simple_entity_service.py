@@ -75,9 +75,7 @@ class SimpleEntityService:
             await session.rollback()
             raise error
 
-    async def delete_simple_entity(
-        self, session: AsyncSession, simple_entity_id: int
-    ) -> bool:
+    async def delete_simple_entity(self, session: AsyncSession, simple_entity_id: int) -> bool:
         """Delete simple entity by ID"""
         try:
             statement = select(SimpleEntity).where(SimpleEntity.id == simple_entity_id)

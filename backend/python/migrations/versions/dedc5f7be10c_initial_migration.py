@@ -1,13 +1,13 @@
 """Initial migration
 
 Revision ID: dedc5f7be10c
-Revises: 
+Revises:
 Create Date: 2021-06-13 17:16:55.426036
 
 """
-from alembic import op
-import sqlalchemy as sa
 
+import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "dedc5f7be10c"
@@ -23,9 +23,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("string_field", sa.String(), nullable=False),
         sa.Column("int_field", sa.Integer(), nullable=False),
-        sa.Column(
-            "enum_field", sa.Enum("A", "B", "C", "D", name="enum"), nullable=False
-        ),
+        sa.Column("enum_field", sa.Enum("A", "B", "C", "D", name="enum"), nullable=False),
         sa.Column("string_array_field", sa.ARRAY(sa.String()), nullable=False),
         sa.Column("bool_field", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
