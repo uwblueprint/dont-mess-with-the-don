@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import BTable from "react-bootstrap/Table";
 import { HeaderGroup, useTable, Column } from "react-table";
 
-
 import EntityAPIClient, {
   EntityResponse,
 } from "../../APIClients/EntityAPIClient";

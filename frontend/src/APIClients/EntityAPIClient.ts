@@ -48,7 +48,6 @@ const get = async (): Promise<EntityResponse[] | null> => {
 
 const getCSV = async (): Promise<string | null> => {
   try {
-
     const { data } = await baseAPIClient.get("/entities", {
       // Following line is necessary to set the Content-Type header
       // Reference: https://github.com/axios/axios/issues/86
