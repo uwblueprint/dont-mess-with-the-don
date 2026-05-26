@@ -1,6 +1,4 @@
 import baseAPIClient from "./BaseAPIClient";
-import AUTHENTICATED_USER_KEY from "../constants/AuthConstants";
-import { getLocalStorageObjProperty } from "../utils/LocalStorageUtils";
 
 enum EnumField {
   "A",
@@ -30,51 +28,35 @@ const create = async ({
   formData,
 }: {
   formData: SimpleEntityRequest;
-}): Promise<SimpleEntityResponse> => {
-  const bearerToken = `Bearer ${getLocalStorageObjProperty(
-    AUTHENTICATED_USER_KEY,
-    "accessToken",
-  )}`;
+}): Promise<SimpleEntityResponse | null> => {
   try {
-    const { data } = await baseAPIClient.post("/simple-entities", formData, {
-      headers: { Authorization: bearerToken },
-    });
+    const { data } = await baseAPIClient.post("/simple-entities", formData);
     return data;
   } catch (error) {
-    return error;
+    return null;
   }
 };
 
-const get = async (): Promise<SimpleEntityResponse[]> => {
-  const bearerToken = `Bearer ${getLocalStorageObjProperty(
-    AUTHENTICATED_USER_KEY,
-    "accessToken",
-  )}`;
+const get = async (): Promise<SimpleEntityResponse[] | null> => {
   try {
-    const { data } = await baseAPIClient.get("/simple-entities", {
-      headers: { Authorization: bearerToken },
-    });
+    const { data } = await baseAPIClient.get("/simple-entities");
     return data;
   } catch (error) {
-    return error;
+    return null;
   }
 };
 
-const getCSV = async (): Promise<string> => {
-  const bearerToken = `Bearer ${getLocalStorageObjProperty(
-    AUTHENTICATED_USER_KEY,
-    "accessToken",
-  )}`;
+const getCSV = async (): Promise<string | null> => {
   try {
     const { data } = await baseAPIClient.get("/simple-entities", {
       // Following line is necessary to set the Content-Type header
       // Reference: https://github.com/axios/axios/issues/86
       data: null,
-      headers: { Authorization: bearerToken, "Content-Type": "text/csv" },
+      headers: { "Content-Type": "text/csv" },
     });
     return data;
   } catch (error) {
-    return error;
+    return null;
   }
 };
 
@@ -85,22 +67,12 @@ const update = async (
   }: {
     entityData: SimpleEntityRequest;
   },
-): Promise<SimpleEntityResponse> => {
-  const bearerToken = `Bearer ${getLocalStorageObjProperty(
-    AUTHENTICATED_USER_KEY,
-    "accessToken",
-  )}`;
+): Promise<SimpleEntityResponse | null> => {
   try {
-    const { data } = await baseAPIClient.put(
-      `/simple-entities/${id}`,
-      entityData,
-      {
-        headers: { Authorization: bearerToken },
-      },
-    );
+    const { data } = await baseAPIClient.put(`/simple-entities/${id}`, entityData);
     return data;
   } catch (error) {
-    return error;
+    return null;
   }
 };
 
