@@ -21,9 +21,7 @@ services:
       context: ./backend/python
       dockerfile: Dockerfile
     ports:
-      - 8080:8080
-    dns:
-      - 8.8.8.8
+      - 8080:8080 
     volumes:
       - ./backend/python:/app
     depends_on:

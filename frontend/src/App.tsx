@@ -36,10 +36,41 @@ const App = (): React.ReactElement => {
         <Router>
           <Switch>
             <Route exact path={Routes.HOME_PAGE} component={Default} />
-            <Route exact path={Routes.CREATE_ENTITY_PAGE} component={CreatePage} />
-            <Route exact path={Routes.UPDATE_ENTITY_PAGE} component={UpdatePage} />
-            <Route exact path={Routes.DISPLAY_ENTITY_PAGE} component={DisplayPage} />
-            <Route exact path={Routes.EDIT_TEAM_PAGE} component={EditTeamInfoPage} />
+            <Route
+              exact
+              path={Routes.CREATE_ENTITY_PAGE}
+              component={CreatePage}
+            />
+            <Route
+              exact
+              path={Routes.UPDATE_ENTITY_PAGE}
+              component={UpdatePage}
+            />
+            <Route
+              exact
+              path={Routes.DISPLAY_ENTITY_PAGE}
+              component={DisplayPage}
+            />
+            <Route
+              exact
+              path={Routes.EDIT_TEAM_PAGE}
+              component={EditTeamInfoPage}
+            />
+            <Route
+              exact
+              path={Routes.CREATE_SIMPLE_ENTITY_PAGE}
+              component={SimpleEntityCreatePage}
+            />
+            <Route
+              exact
+              path={Routes.UPDATE_SIMPLE_ENTITY_PAGE}
+              component={SimpleEntityUpdatePage}
+            />
+            <Route
+              exact
+              path={Routes.DISPLAY_SIMPLE_ENTITY_PAGE}
+              component={SimpleEntityDisplayPage}
+            />
             <Route exact path={Routes.HOOKS_PAGE} component={HooksDemo} />
             <Route exact path="*" component={NotFound} />
           </Switch>
