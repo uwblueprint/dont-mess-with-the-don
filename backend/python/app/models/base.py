@@ -23,9 +23,7 @@ class BaseModel(sm.SQLModel):
     """Enhanced base model with common fields and functionality"""
 
     created_at: datetime | None = Field(
-        default_factory=lambda: datetime.now(ZoneInfo("America/Toronto")).replace(
-            tzinfo=None
-        ),
+        default_factory=lambda: datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None),
     )
     updated_at: datetime | None = Field(default=None)
 
@@ -33,9 +31,7 @@ class BaseModel(sm.SQLModel):
         super().__init_subclass__(**kwargs)
 
     def __init__(self, **data: Any) -> None:
-        if self.model_config.get("table", False) and not _ONGOING_MODEL_VALIDATE.get(
-            False
-        ):
+        if self.model_config.get("table", False) and not _ONGOING_MODEL_VALIDATE.get(False):
             self_copy = self.model_copy()
             self.__pydantic_validator__.validate_python(data, self_instance=self_copy)
             data = self_copy.model_dump()

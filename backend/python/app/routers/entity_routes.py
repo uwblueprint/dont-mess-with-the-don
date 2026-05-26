@@ -19,9 +19,7 @@ async def get_entities(
         entities = await entity_service.get_entities(session)
         return [EntityRead.model_validate(entity) for entity in entities]
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.get("/{entity_id}", response_model=EntityRead)
@@ -51,9 +49,7 @@ async def create_entity(
         created_entity = await entity_service.create_entity(session, entity)
         return EntityRead.model_validate(created_entity)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 
 @router.put("/{entity_id}", response_model=EntityRead)

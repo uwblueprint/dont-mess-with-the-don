@@ -20,9 +20,7 @@ async_session_maker_instance: async_sessionmaker[AsyncSession] | None = None
 def get_database_url() -> str:
     """Get database URL based on environment"""
     if os.getenv("APP_ENV") == "production":
-        return os.getenv("DATABASE_URL", "").replace(
-            "postgresql://", "postgresql+asyncpg://"
-        )
+        return os.getenv("DATABASE_URL", "").replace("postgresql://", "postgresql+asyncpg://")
     else:
         return "postgresql+asyncpg://{username}:{password}@{host}:5432/{db}".format(
             username=os.getenv("POSTGRES_USER"),
@@ -53,9 +51,7 @@ def init_database() -> None:
     async_engine = create_async_engine(database_url, echo=echo_sql)
 
     # Async session maker
-    async_session_maker_instance = async_sessionmaker(
-        async_engine, expire_on_commit=False
-    )
+    async_session_maker_instance = async_sessionmaker(async_engine, expire_on_commit=False)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

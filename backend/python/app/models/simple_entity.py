@@ -20,9 +20,7 @@ class SimpleEntityBase(SQLModel):
             )
         ),
     )
-    string_array_field: list[str] = Field(
-        default_factory=list, sa_column=Column(ARRAY(String))
-    )
+    string_array_field: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     bool_field: bool = Field(default=False)
 
 

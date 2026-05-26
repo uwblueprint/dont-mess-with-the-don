@@ -30,9 +30,7 @@ class EntityService:
 
         return entity
 
-    async def create_entity(
-        self, session: AsyncSession, entity_data: EntityCreate
-    ) -> Entity:
+    async def create_entity(self, session: AsyncSession, entity_data: EntityCreate) -> Entity:
         """Create new entity"""
         try:
             entity = Entity(**entity_data.model_dump())

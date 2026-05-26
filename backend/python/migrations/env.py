@@ -11,12 +11,12 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from sqlmodel import SQLModel
-from alembic import context
+from alembic import context  # noqa: E402
+from sqlmodel import SQLModel  # noqa: E402
 
 # Import all models to ensure they're registered with SQLModel
-from app.models.entity import Entity  # noqa: F401
-from app.models.simple_entity import SimpleEntity  # noqa: F401
+from app.models.entity import Entity  # noqa: E402, F401
+from app.models.simple_entity import SimpleEntity  # noqa: E402, F401
 
 # Alembic Config object
 config = context.config
@@ -29,9 +29,7 @@ logger = logging.getLogger("alembic.env")
 
 def get_database_url() -> str:
     if os.getenv("APP_ENV") == "production":
-        return os.getenv("DATABASE_URL", "").replace(
-            "postgresql+asyncpg://", "postgresql://"
-        )
+        return os.getenv("DATABASE_URL", "").replace("postgresql+asyncpg://", "postgresql://")
     else:
         return "postgresql://{username}:{password}@{host}:5432/{db}".format(
             username=os.getenv("POSTGRES_USER"),

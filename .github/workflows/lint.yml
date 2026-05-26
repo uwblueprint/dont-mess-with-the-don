@@ -62,4 +62,4 @@ jobs:
       - name: Lint Python backend
         if: steps.changes.outputs.python-backend == 'true'
         working-directory: ./backend/python
-        run: pip install black && python -m black --check .
+        run: pip install ruff mypy && ruff check . && ruff format --check . && mypy .

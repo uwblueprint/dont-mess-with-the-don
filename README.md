@@ -75,8 +75,20 @@ docker exec -it scv2_py_backend /bin/bash
 # Open a psql shell in the database container
 docker exec -it scv2_db psql -U postgres -d scv2
 
-# Lint / format Python code
-docker exec -it scv2_py_backend black .
+# Lint Python code (check only)
+docker exec scv2_py_backend ruff check .
+
+# Auto-fix lint issues
+docker exec scv2_py_backend ruff check --fix .
+
+# Format Python code
+docker exec scv2_py_backend ruff format .
+
+# Check formatting without applying
+docker exec scv2_py_backend ruff format --check .
+
+# Type check
+docker exec scv2_py_backend mypy .
 
 # Run Python tests
 docker exec -it scv2_py_backend pytest
