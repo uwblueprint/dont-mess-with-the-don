@@ -22,21 +22,16 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- [nvm](https://github.com/nvm-sh/nvm) (recommended for managing Node versions)
+- Node.js 18+ (install directly from [nodejs.org](https://nodejs.org/) or via [nvm](https://github.com/nvm-sh/nvm))
 
 ### Initial Setup
 
 1. Clone this repository and `cd` into the project folder
-2. Install the required Node version:
-```bash
-nvm install
-nvm use
-```
-3. Pull secrets from Vault:
-```bash
-vault kv get -format=json kv/internal-tools | python update_secret_files.py
-```
-4. Start all services:
+2. Set up environment files:
+
+   **Ask PL** To share `.env` (root) and `frontend/.env` and place them in the repo root and `frontend/` respectively.
+
+3. Start all services:
 ```bash
 docker-compose up --build
 ```
@@ -52,7 +47,7 @@ The backend uses **FastAPI** with **SQLModel** (SQLAlchemy + Pydantic). Database
 After modifying a model in `backend/python/app/models/`, generate a migration:
 
 ```bash
-docker exec -it scv2_py_backend alembic revision --autogenerate -m "describe your change"
+docker exec -it don-backend alembic revision --autogenerate -m "describe your change"
 ```
 
 Alembic diffs your models against the current DB schema and writes the migration file to `backend/python/migrations/versions/`.
@@ -60,7 +55,7 @@ Alembic diffs your models against the current DB schema and writes the migration
 #### Running migrations manually
 
 ```bash
-docker exec -it scv2_py_backend alembic upgrade head
+docker exec -it don-backend alembic upgrade head
 ```
 
 ### Useful Commands
@@ -70,28 +65,28 @@ docker exec -it scv2_py_backend alembic upgrade head
 docker ps
 
 # Open a shell in the backend container
-docker exec -it scv2_py_backend /bin/bash
+docker exec -it don-backend /bin/bash
 
 # Open a psql shell in the database container
-docker exec -it scv2_db psql -U postgres -d scv2
+docker exec -it don-db psql -U postgres -d postgres
 
 # Lint Python code (check only)
-docker exec scv2_py_backend ruff check .
+docker exec don-backend ruff check .
 
 # Auto-fix lint issues
-docker exec scv2_py_backend ruff check --fix .
+docker exec don-backend ruff check --fix .
 
 # Format Python code
-docker exec scv2_py_backend ruff format .
+docker exec don-backend ruff format .
 
 # Check formatting without applying
-docker exec scv2_py_backend ruff format --check .
+docker exec don-backend ruff format --check .
 
 # Type check
-docker exec scv2_py_backend mypy .
+docker exec don-backend mypy .
 
 # Run Python tests
-docker exec -it scv2_py_backend pytest
+docker exec -it don-backend pytest
 ```
 
 ## Version Control Guide
