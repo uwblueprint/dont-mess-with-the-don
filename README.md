@@ -29,8 +29,8 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 1. Clone this repository and `cd` into the project folder
 2. Install the required Node version:
 ```bash
-nvm install
-nvm use
+nvm install 26
+nvm use 26
 ```
 3. Pull secrets from Vault:
 ```bash
