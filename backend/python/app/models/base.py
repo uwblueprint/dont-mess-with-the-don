@@ -5,6 +5,8 @@ from typing import Any, TypeVar
 from zoneinfo import ZoneInfo
 
 import sqlmodel as sm
+from sqlalchemy import Column
+from sqlalchemy.types import DateTime as SADateTime
 from sqlmodel import Field
 
 _ONGOING_MODEL_VALIDATE: ContextVar[bool] = ContextVar("_ONGOING_MODEL_VALIDATE")
@@ -25,7 +27,13 @@ class BaseModel(sm.SQLModel):
     created_at: datetime | None = Field(
         default_factory=lambda: datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None),
     )
-    updated_at: datetime | None = Field(default=None)
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            SADateTime,
+            onupdate=lambda: datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None),
+        ),
+    )
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
