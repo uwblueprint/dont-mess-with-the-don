@@ -1,6 +1,5 @@
 import logging
 
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -31,7 +30,9 @@ class EventTypeService:
 
         return event_type
 
-    async def create_event_type(self, session: AsyncSession, event_type_data: EventTypeCreate) -> EventType:
+    async def create_event_type(
+        self, session: AsyncSession, event_type_data: EventTypeCreate
+    ) -> EventType:
         """Create new event type"""
         try:
             event_type = EventType(**event_type_data.model_dump())

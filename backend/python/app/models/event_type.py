@@ -45,4 +45,4 @@ class EventTypeUpdate(SQLModel):
     recurrence: str | None = Field(default=None, min_length=1, max_length=255)
     location: str | None = Field(default=None, min_length=1, max_length=255)
     max_attendees: int | None = Field(default=None, ge=0)
-    form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
+    form_json: dict | None = Field(default=None)
