@@ -45,7 +45,8 @@ class UserBase(SQLModel):
                 values_callable=lambda obj: [e.value for e in obj],
                 name="userprofiletype",
                 create_type=True,
-            )
+            ),
+            nullable=False,
         ),
     )
     location: str | None = Field(default=None, max_length=255)
@@ -85,4 +86,3 @@ class UserUpdate(SQLModel):
     location: str | None = Field(default=None, max_length=255)
     is_deactivated: bool | None = Field(default=None)
     parent_id: int | None = Field(default=None)
-    password_hash: str | None = Field(default=None)

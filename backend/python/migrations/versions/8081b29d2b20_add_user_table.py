@@ -26,7 +26,7 @@ def upgrade():
     sa.Column('provider_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('provider', sa.Enum('microsoft', 'google', name='userprovider'), nullable=True),
     sa.Column('profile_pic_url', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
-    sa.Column('profile_type', sa.Enum('child', 'guest', 'default', name='userprofiletype'), nullable=True),
+    sa.Column('profile_type', sa.Enum('child', 'guest', 'default', name='userprofiletype'), nullable=False),
     sa.Column('location', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('is_deactivated', sa.Boolean(), nullable=False),
     sa.Column('parent_id', sa.Integer(), nullable=True),

@@ -2,13 +2,15 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models.user import User, UserCreate, UserUpdate
+from app.services.interfaces.user_service import IUserService
 
 
-class UserService:
+class UserService(IUserService):
     """Service for managing users"""
 
     def __init__(self, logger: logging.Logger):
@@ -27,7 +29,7 @@ class UserService:
         user = result.scalars().first()
 
         if not user:
-            self.logger.error(f"User with id {user_id} not found")
+            self.logger.warning(f"User with id {user_id} not found")
             return None
 
         return user
@@ -46,6 +48,10 @@ class UserService:
             await session.commit()
             await session.refresh(user)
             return user
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(f"Duplicate email on create: {user_data.email}")
+            raise ValueError(f"Email {user_data.email} is already in use") from error
         except Exception as error:
             self.logger.error(f"Failed to create user: {error!s}")
             await session.rollback()
@@ -61,7 +67,7 @@ class UserService:
             user = result.scalars().first()
 
             if not user:
-                self.logger.error(f"User with id {user_id} not found")
+                self.logger.warning(f"User with id {user_id} not found")
                 return None
 
             update_data = user_data.model_dump(exclude_unset=True)
@@ -86,7 +92,7 @@ class UserService:
             user = result.scalars().first()
 
             if not user:
-                self.logger.error(f"User with id {user_id} not found")
+                self.logger.warning(f"User with id {user_id} not found")
                 return False
 
             await session.delete(user)

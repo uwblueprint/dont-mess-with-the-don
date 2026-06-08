@@ -18,7 +18,7 @@ async def get_users(
         users = await user_service.get_users(session)
         return [UserRead.model_validate(user) for user in users]
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred") from e
 
 
 @router.get("/{user_id}", response_model=UserRead)
@@ -27,7 +27,10 @@ async def get_user(
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
 ) -> UserRead:
-    user = await user_service.get_user(session, user_id)
+    try:
+        user = await user_service.get_user(session, user_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred") from e
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -45,18 +48,23 @@ async def create_user(
     try:
         created_user = await user_service.create_user(session, user)
         return UserRead.model_validate(created_user)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred") from e
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=UserRead)
 async def update_user(
     user_id: int,
     user: UserUpdate,
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
 ) -> UserRead:
-    updated_user = await user_service.update_user(session, user_id, user)
+    try:
+        updated_user = await user_service.update_user(session, user_id, user)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred") from e
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -71,7 +79,10 @@ async def delete_user(
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
 ) -> None:
-    success = await user_service.delete_user(session, user_id)
+    try:
+        success = await user_service.delete_user(session, user_id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred") from e
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
