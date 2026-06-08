@@ -5,9 +5,9 @@ Revises: fd470c3ddd8a
 Create Date: 2026-06-05 05:32:18.807009
 
 """
+import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -26,7 +26,11 @@ def upgrade():
     sa.Column('provider_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('provider', sa.Enum('microsoft', 'google', name='userprovider'), nullable=True),
     sa.Column('profile_pic_url', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
-    sa.Column('profile_type', sa.Enum('child', 'guest', 'default', name='userprofiletype'), nullable=False),
+    sa.Column(
+        'profile_type',
+        sa.Enum('child', 'guest', 'default', name='userprofiletype'),
+        nullable=False,
+    ),
     sa.Column('location', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('is_deactivated', sa.Boolean(), nullable=False),
     sa.Column('parent_id', sa.Integer(), nullable=True),

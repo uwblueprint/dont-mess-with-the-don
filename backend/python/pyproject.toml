@@ -7,6 +7,9 @@ select = ["E", "F", "I"]  # pycodestyle errors, pyflakes, isort
 [tool.ruff.format]
 quote-style = "double"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.mypy]
 python_version = "3.11"
 ignore_missing_imports = true
