@@ -17,6 +17,7 @@ from sqlmodel import SQLModel  # noqa: E402
 # Import all models to ensure they're registered with SQLModel
 from app.models.entity import Entity  # noqa: E402, F401
 from app.models.simple_entity import SimpleEntity  # noqa: E402, F401
+from app.models.user import User  # noqa: E402, F401
 
 # Alembic Config object
 config = context.config
