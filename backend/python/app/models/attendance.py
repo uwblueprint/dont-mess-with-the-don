@@ -1,4 +1,6 @@
 from datetime import datetime
+from uuid import UUID
+
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
@@ -6,7 +8,7 @@ from .base import BaseModel
 
 class AttendanceBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
-    event_id: int = Field(foreign_key="events.id")
+    event_id: UUID = Field(foreign_key="events.id")
     attended_at: datetime | None = None
 
 class Attendance(AttendanceBase, BaseModel, table=True):

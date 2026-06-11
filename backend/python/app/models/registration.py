@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import Enum
@@ -12,7 +13,7 @@ class RegistrationBase(SQLModel):
     """Shared fields between table and API models for Registration"""
 
     user_id: int = Field(foreign_key="users.id")
-    event_instance_id: int = Field(foreign_key="event_instances.id")
+    event_instance_id: UUID = Field(foreign_key="events.id")
     status: RegistrationStatusEnum = Field(
         default=RegistrationStatusEnum.WAITLIST,
         sa_column=Column(
@@ -55,6 +56,6 @@ class RegistrationUpdate(SQLModel):
     """Registration update request - all fields optional"""
 
     user_id: int | None = Field(default=None)
-    event_instance_id: int | None = Field(default=None)
+    event_instance_id: UUID | None = Field(default=None)
     status: RegistrationStatusEnum | None = None
     response_id: int | None = Field(default=None)

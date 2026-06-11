@@ -1,8 +1,9 @@
-from sqlalchemy import ARRAY, JSON, Enum, String
+from uuid import UUID
+
+from sqlalchemy import JSON
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
-from .enum import EntityEnum
 
 # common columns and methods across multiple data models can be added via a Mixin class:
 # https://docs.sqlalchemy.org/en/13/orm/extensions/declarative/mixins.html
@@ -15,9 +16,9 @@ from .enum import EntityEnum
 class FormSubmissionBase(SQLModel):
 
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int #FK
-    event_instance_id: int #FK
-    response_json: JSON | None = Field(default=None, sa_column=Column(JSON))
+    user_id: int = Field(foreign_key="users.id")
+    event_instance_id: UUID = Field(foreign_key="events.id")
+    response_json: dict | None = Field(default=None, sa_column=Column(JSON))
 
 
 class FormSubmission(FormSubmissionBase, BaseModel, table=True):
@@ -26,9 +27,9 @@ class FormSubmission(FormSubmissionBase, BaseModel, table=True):
     __tablename__ = "form_submissions"
 
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int #FK
-    event_instance_id: int #FK
-    response_json: JSON | None = Field(default=None, sa_column=Column(JSON))
+    user_id: int = Field(foreign_key="users.id")
+    event_instance_id: UUID = Field(foreign_key="events.id")
+    response_json: dict | None = Field(default=None, sa_column=Column(JSON))
 
 
 class FormSubmissionCreate(FormSubmissionBase):
