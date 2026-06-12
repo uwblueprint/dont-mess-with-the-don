@@ -1,5 +1,7 @@
 [tool.ruff]
 line-length = 100
+extend-exclude = ["migrations"]
+force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]  # pycodestyle errors, pyflakes, isort

@@ -16,7 +16,9 @@ async def test_create_user_duplicate_email_returns_409(client):
 
 
 async def test_create_user_invalid_profile_pic_url_returns_422(client):
-    response = await client.post(BASE, json={"email": "pic@example.com", "profile_pic_url": "not-a-url"})
+    response = await client.post(
+        BASE, json={"email": "pic@example.com", "profile_pic_url": "not-a-url"}
+    )
     assert response.status_code == 422
 
 

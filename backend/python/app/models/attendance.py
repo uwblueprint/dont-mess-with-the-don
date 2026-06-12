@@ -6,6 +6,7 @@ from sqlmodel import Field, SQLModel
 
 from .base import BaseModel
 
+
 class AttendanceBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     event_id: UUID = Field(foreign_key="events.id")

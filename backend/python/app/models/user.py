@@ -2,7 +2,8 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from pydantic import EmailStr, field_validator
-from sqlalchemy import Column, Enum as SAEnum, Index, String, text
+from sqlalchemy import Column, Index, String, text
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 from .base import BaseModel
