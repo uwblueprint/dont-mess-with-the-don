@@ -37,6 +37,7 @@ class UserBase(SQLModel):
     city: str | None = Field(default=None, max_length=255)
     province: str | None = Field(default=None, max_length=255)
     zip_code: str | None = Field(default=None, max_length=255)
+
     @field_validator("profile_pic_url")
     @classmethod
     def validate_profile_pic_url(cls, v: str | None) -> str | None:
