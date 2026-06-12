@@ -15,7 +15,7 @@ class RegistrationBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     event_instance_id: UUID = Field(foreign_key="events.id")
     status: RegistrationStatusEnum = Field(
-        default=RegistrationStatusEnum.WAITLIST,
+        default=RegistrationStatusEnum.REGISTERED,
         sa_column=Column(
             Enum(
                 RegistrationStatusEnum,
@@ -27,6 +27,8 @@ class RegistrationBase(SQLModel):
     registered_at: datetime = Field(
         default_factory=lambda: datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None),
     )
+    cancelled_at: datetime | None = Field(default=None)
+    is_late_cancellation: bool = Field(default=False)
     response_id: int | None = Field(default=None, foreign_key="form_submissions.id")
 
 
@@ -58,4 +60,6 @@ class RegistrationUpdate(SQLModel):
     user_id: int | None = Field(default=None)
     event_instance_id: UUID | None = Field(default=None)
     status: RegistrationStatusEnum | None = None
+    cancelled_at: datetime | None = Field(default=None)
+    is_late_cancellation: bool | None = Field(default=None)
     response_id: int | None = Field(default=None)

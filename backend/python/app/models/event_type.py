@@ -1,3 +1,5 @@
+from uuid import UUID, uuid4
+
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
@@ -10,9 +12,9 @@ class EventTypeBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     image: str = Field(min_length=1, max_length=255)
     description: str = Field(min_length=1)
-    recurrence: str = Field(min_length=1, max_length=255)
     location: str = Field(min_length=1, max_length=255)
     max_attendees: int = Field(ge=0)
+    cancellation_cutoff_hours: int = Field(default=48, ge=0)
     form_json: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
 
@@ -21,7 +23,7 @@ class EventType(EventTypeBase, BaseModel, table=True):
 
     __tablename__ = "event_types"
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
 
 
 class EventTypeCreate(EventTypeBase):
@@ -33,7 +35,7 @@ class EventTypeCreate(EventTypeBase):
 class EventTypeRead(EventTypeBase):
     """EventType response model"""
 
-    id: int
+    id: UUID
 
 
 class EventTypeUpdate(SQLModel):
@@ -42,7 +44,7 @@ class EventTypeUpdate(SQLModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     image: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, min_length=1)
-    recurrence: str | None = Field(default=None, min_length=1, max_length=255)
     location: str | None = Field(default=None, min_length=1, max_length=255)
     max_attendees: int | None = Field(default=None, ge=0)
+    cancellation_cutoff_hours: int | None = Field(default=None, ge=0)
     form_json: dict | None = Field(default=None)

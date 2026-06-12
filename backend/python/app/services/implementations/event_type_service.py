@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -18,7 +19,7 @@ class EventTypeService:
         result = await session.execute(statement)
         return list(result.scalars().all())
 
-    async def get_event_type(self, session: AsyncSession, event_type_id: int) -> EventType | None:
+    async def get_event_type(self, session: AsyncSession, event_type_id: UUID) -> EventType | None:
         """Get event type by ID"""
         statement = select(EventType).where(EventType.id == event_type_id)
         result = await session.execute(statement)
@@ -46,7 +47,7 @@ class EventTypeService:
             raise error
 
     async def update_event_type(
-        self, session: AsyncSession, event_type_id: int, event_type_data: EventTypeUpdate
+        self, session: AsyncSession, event_type_id: UUID, event_type_data: EventTypeUpdate
     ) -> EventType | None:
         """Update existing event type"""
         try:
@@ -70,7 +71,7 @@ class EventTypeService:
             await session.rollback()
             raise error
 
-    async def delete_event_type(self, session: AsyncSession, event_type_id: int) -> bool:
+    async def delete_event_type(self, session: AsyncSession, event_type_id: UUID) -> bool:
         """Delete event type by ID"""
         try:
             statement = select(EventType).where(EventType.id == event_type_id)
