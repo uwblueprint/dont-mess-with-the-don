@@ -39,8 +39,8 @@ def upgrade():
     sa.Column('provider_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('provider', sa.Enum('microsoft', 'google', name='userprovider'), nullable=True),
     sa.Column('profile_pic_url', sqlmodel.sql.sqltypes.AutoString(length=500), nullable=True),
-    sa.Column('first_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
-    sa.Column('last_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('first_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
+    sa.Column('last_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('phone_number', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('date_of_birth', sa.DateTime(), nullable=True),
     sa.Column('gender', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
@@ -95,7 +95,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('event_instance_id', sa.Uuid(), nullable=False),
-    sa.Column('response_json', sa.JSON(), nullable=True),
+    sa.Column('response_json', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.ForeignKeyConstraint(['event_instance_id'], ['events.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -105,7 +105,7 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('event_instance_id', sa.Uuid(), nullable=False),
-    sa.Column('status', sa.Enum('registered', 'accepted', 'cancelled', name='registrationstatusenum'), nullable=True),
+    sa.Column('status', sa.Enum('registered', 'accepted', 'cancelled', name='registrationstatusenum'), nullable=False),
     sa.Column('registered_at', sa.DateTime(), nullable=False),
     sa.Column('cancelled_at', sa.DateTime(), nullable=True),
     sa.Column('is_late_cancellation', sa.Boolean(), nullable=False),
@@ -128,4 +128,7 @@ def downgrade():
     op.drop_index('uq_users_email_default', table_name='users', postgresql_where=sa.text("profile_type = 'default'"))
     op.drop_table('users')
     op.drop_table('event_types')
+    op.execute('DROP TYPE IF EXISTS registrationstatusenum')
+    op.execute('DROP TYPE IF EXISTS userprofiletype')
+    op.execute('DROP TYPE IF EXISTS userprovider')
     # ### end Alembic commands ###

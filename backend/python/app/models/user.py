@@ -27,8 +27,8 @@ class UserBase(SQLModel):
         ),
     )
     profile_pic_url: str | None = Field(default=None, max_length=500)
-    first_name: str = Field(min_length=1, max_length=255)
-    last_name: str = Field(min_length=1, max_length=255)
+    first_name: str | None = Field(default=None, min_length=1, max_length=255)
+    last_name: str | None = Field(default=None, min_length=1, max_length=255)
     phone_number: str | None = Field(default=None, max_length=255)
     date_of_birth: datetime | None = Field(default=None)
     gender: str | None = Field(default=None, max_length=255)

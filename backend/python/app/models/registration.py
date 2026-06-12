@@ -21,7 +21,8 @@ class RegistrationBase(SQLModel):
                 RegistrationStatusEnum,
                 values_callable=lambda obj: [e.value for e in obj],
                 name="registrationstatusenum",
-            )
+            ),
+            nullable=False,
         ),
     )
     registered_at: datetime = Field(

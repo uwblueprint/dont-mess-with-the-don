@@ -44,13 +44,13 @@ async def test_get_nonexistent_user_returns_404(client):
 async def test_update_user_returns_200(client):
     create = await client.post(BASE, json={"email": "update@example.com"})
     user_id = create.json()["id"]
-    response = await client.patch(f"{BASE}{user_id}", json={"location": "Toronto"})
+    response = await client.patch(f"{BASE}{user_id}", json={"region": "Toronto"})
     assert response.status_code == 200
-    assert response.json()["location"] == "Toronto"
+    assert response.json()["region"] == "Toronto"
 
 
 async def test_update_nonexistent_user_returns_404(client):
-    response = await client.patch(f"{BASE}99999", json={"location": "Toronto"})
+    response = await client.patch(f"{BASE}99999", json={"region": "Toronto"})
     assert response.status_code == 404
 
 
