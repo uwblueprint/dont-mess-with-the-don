@@ -17,6 +17,12 @@ from sqlmodel import SQLModel  # noqa: E402
 # Import all models to ensure they're registered with SQLModel
 from app.models.entity import Entity  # noqa: E402, F401
 from app.models.simple_entity import SimpleEntity  # noqa: E402, F401
+from app.models.user import User  # noqa: E402, F401
+from app.models.event import Event  # noqa: E402, F401
+from app.models.event_type import EventType  # noqa: E402, F401
+from app.models.attendance import Attendance  # noqa: E402, F401
+from app.models.registration import Registration  # noqa: E402, F401
+from app.models.form_submission import FormSubmission  # noqa: E402, F401
 
 # Alembic Config object
 config = context.config
