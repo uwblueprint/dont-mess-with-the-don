@@ -68,6 +68,36 @@ async def test_delete_nonexistent_user_returns_404(client):
     assert response.status_code == 404
 
 
+async def test_get_user_children_returns_200(client):
+    parent = await client.post(BASE, json={"email": "parent@example.com"})
+    parent_id = parent.json()["id"]
+
+    child = await client.post(
+        BASE, json={"email": "child@example.com", "parent_id": parent_id}
+    )
+    child_id = child.json()["id"]
+
+    response = await client.get(f"{BASE}{parent_id}/children")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["id"] == child_id
+
+
+async def test_get_user_children_returns_empty_list_when_no_children(client):
+    parent = await client.post(BASE, json={"email": "lonely@example.com"})
+    parent_id = parent.json()["id"]
+
+    response = await client.get(f"{BASE}{parent_id}/children")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_get_user_children_nonexistent_user_returns_404(client):
+    response = await client.get(f"{BASE}99999/children")
+    assert response.status_code == 404
+
+
 async def test_response_excludes_password_hash(client):
     create_response = await client.post(
         BASE, json={"email": "secure@example.com", "password_hash": "secret"}
