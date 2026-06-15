@@ -72,9 +72,7 @@ async def test_get_user_children_returns_200(client):
     guardian = await client.post(BASE, json={"email": "guardian@example.com"})
     guardian_id = guardian.json()["id"]
 
-    child = await client.post(
-        BASE, json={"email": "child@example.com", "guardian_id": guardian_id}
-    )
+    child = await client.post(BASE, json={"email": "child@example.com", "guardian_id": guardian_id})
     child_id = child.json()["id"]
 
     response = await client.get(f"{BASE}{guardian_id}/children")

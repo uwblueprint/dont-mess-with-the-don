@@ -43,9 +43,7 @@ class UserService(IUserService):
 
     async def get_user_children(self, session: AsyncSession, user_id: int) -> list[User] | None:
         """Get user by ID and return their children"""
-        statement = (
-            select(User).options(selectinload(User.children)).where(User.id == user_id)
-        )
+        statement = select(User).options(selectinload(User.children)).where(User.id == user_id)
         result = await session.execute(statement)
         user = result.scalars().first()
 
