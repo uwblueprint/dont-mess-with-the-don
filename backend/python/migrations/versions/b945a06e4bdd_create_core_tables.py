@@ -81,13 +81,13 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('event_id', sa.Uuid(), nullable=False),
+    sa.Column('event_instance_id', sa.Uuid(), nullable=False),
     sa.Column('attended_at', sa.DateTime(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['event_id'], ['events.id'], ),
+    sa.ForeignKeyConstraint(['event_instance_id'], ['events.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id', 'event_id')
+    sa.UniqueConstraint('user_id', 'event_instance_id')
     )
     op.create_table('form_submissions',
     sa.Column('created_at', sa.DateTime(), nullable=True),
