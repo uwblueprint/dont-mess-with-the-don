@@ -8,6 +8,7 @@ from app.services.implementations.attendance_service import AttendanceService
 
 router = APIRouter(prefix="/attendance", tags=["attendance"])
 
+
 @router.get("/{attendance_id}", response_model=AttendanceRead)
 async def get_attendance(
     attendance_id: int,
@@ -24,6 +25,7 @@ async def get_attendance(
 
     return AttendanceRead.model_validate(attendance)
 
+
 @router.get("/", response_model=list[AttendanceRead])
 async def get_attendance_list(
     session: AsyncSession = Depends(get_session),
@@ -35,6 +37,7 @@ async def get_attendance_list(
         for attendance in attendance_records
     ]
 
+
 @router.post("/", response_model=AttendanceRead, status_code=status.HTTP_201_CREATED)
 async def create_attendance(
     attendance: AttendanceCreate,
@@ -44,6 +47,7 @@ async def create_attendance(
     """Create a new attendance listing"""
     created_attendance = await attendance_service.create_attendance(session, attendance)
     return AttendanceRead.model_validate(created_attendance)
+
 
 @router.delete("/{attendance_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_attendance(

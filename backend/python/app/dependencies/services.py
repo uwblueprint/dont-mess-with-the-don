@@ -33,8 +33,9 @@ def get_user_service() -> UserService:
     logger = get_logger()
     return UserService(logger)
 
+
 @lru_cache
 def get_attendance_service() -> AttendanceService:
-    """Get attendance instance"""
+    """Get attendance service instance"""
     logger = get_logger()
     return AttendanceService(logger)

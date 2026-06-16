@@ -13,11 +13,17 @@ class AttendanceService:
     async def create_attendance(
         self, session: AsyncSession, attendance_data: AttendanceCreate
     ) -> Attendance:
-        attendance = Attendance(**attendance_data.model_dump())
-        session.add(attendance)
-        await session.commit()
-        await session.refresh(attendance)
-        return attendance
+        """Create new attendance record"""
+        try:
+            attendance = Attendance(**attendance_data.model_dump())
+            session.add(attendance)
+            await session.commit()
+            await session.refresh(attendance)
+            return attendance
+        except Exception as error:
+            self.logger.error(f"Failed to create attendance: {error!s}")
+            await session.rollback()
+            raise
 
     async def get_attendance(
         self, session: AsyncSession, attendance_id: int
@@ -36,11 +42,18 @@ class AttendanceService:
     async def delete_attendance(
         self, session: AsyncSession, attendance_id: int
     ) -> bool:
-        attendance = await self.get_attendance(session, attendance_id)
+        """Delete attendance by ID"""
+        try:
+            attendance = await self.get_attendance(session, attendance_id)
 
-        if not attendance:
-            return False
+            if not attendance:
+                self.logger.warning(f"Attendance with id {attendance_id} not found")
+                return False
 
-        await session.delete(attendance)
-        await session.commit()
-        return True
+            await session.delete(attendance)
+            await session.commit()
+            return True
+        except Exception as error:
+            self.logger.error(f"Failed to delete attendance: {error!s}")
+            await session.rollback()
+            raise
