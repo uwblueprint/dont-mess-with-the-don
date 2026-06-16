@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models.event_type import EventType, EventTypeCreate, EventTypeUpdate
+from app.services.interfaces.event_type_service import IEventTypeService
 
 
-class EventTypeService:
+class EventTypeService(IEventTypeService):
     """Service for managing event types"""
 
     def __init__(self, logger: logging.Logger):
