@@ -32,10 +32,7 @@ async def get_attendance_list(
     attendance_service: AttendanceService = Depends(get_attendance_service),
 ) -> list[AttendanceRead]:
     attendance_records = await attendance_service.get_attendance_list(session)
-    return [
-        AttendanceRead.model_validate(attendance)
-        for attendance in attendance_records
-    ]
+    return [AttendanceRead.model_validate(attendance) for attendance in attendance_records]
 
 
 @router.post("/", response_model=AttendanceRead, status_code=status.HTTP_201_CREATED)

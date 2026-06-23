@@ -18,9 +18,7 @@ class IAttendanceService(ABC):
         pass
 
     @abstractmethod
-    async def get_attendance(
-        self, session: AsyncSession, attendance_id: int
-    ) -> Attendance | None:
+    async def get_attendance(self, session: AsyncSession, attendance_id: int) -> Attendance | None:
         pass
 
     @abstractmethod
@@ -33,7 +31,5 @@ class IAttendanceService(ABC):
         pass
 
     @abstractmethod
-    async def delete_attendance(
-        self, session: AsyncSession, attendance_id: int
-    ) -> bool:
+    async def delete_attendance(self, session: AsyncSession, attendance_id: int) -> bool:
         pass
