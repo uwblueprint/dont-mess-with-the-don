@@ -1,12 +1,16 @@
 import logging
 
+from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.models.attendance import Attendance, AttendanceCreate
+from app.services.interfaces.attendance_service import IAttendanceService
 
 
-class AttendanceService:
+class AttendanceService(IAttendanceService):
     def __init__(self, logger: logging.Logger):
         self.logger = logger
 
@@ -20,6 +24,16 @@ class AttendanceService:
             await session.commit()
             await session.refresh(attendance)
             return attendance
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(
+                f"Integrity error creating attendance: user_id={attendance_data.user_id}, "
+                f"event_instance_id={attendance_data.event_instance_id}"
+            )
+            raise ValueError(
+                f"Attendance for user_id={attendance_data.user_id} and "
+                f"event_instance_id={attendance_data.event_instance_id} already exists"
+            ) from error
         except Exception as error:
             self.logger.error(f"Failed to create attendance: {error!s}")
             await session.rollback()
@@ -31,11 +45,19 @@ class AttendanceService:
         statement = select(Attendance).where(Attendance.id == attendance_id)
         result = await session.execute(statement)
         return result.scalars().first()
-    
+
     async def get_attendance_list(
-        self, session: AsyncSession
+        self,
+        session: AsyncSession,
+        user_id: int | None = None,
+        event_instance_id: UUID | None = None,
     ) -> list[Attendance]:
         statement = select(Attendance)
+        if user_id is not None:
+            statement = statement.where(Attendance.user_id == user_id)
+        if event_instance_id is not None:
+            statement = statement.where(Attendance.event_instance_id == event_instance_id)
+
         result = await session.execute(statement)
         return list(result.scalars().all())
 

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,10 +30,16 @@ async def get_attendance(
 
 @router.get("/", response_model=list[AttendanceRead])
 async def get_attendance_list(
+    user_id: int | None = None,
+    event_instance_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     attendance_service: AttendanceService = Depends(get_attendance_service),
 ) -> list[AttendanceRead]:
-    attendance_records = await attendance_service.get_attendance_list(session)
+    attendance_records = await attendance_service.get_attendance_list(
+        session,
+        user_id,
+        event_instance_id,
+    )
     return [
         AttendanceRead.model_validate(attendance)
         for attendance in attendance_records
@@ -44,9 +52,20 @@ async def create_attendance(
     session: AsyncSession = Depends(get_session),
     attendance_service: AttendanceService = Depends(get_attendance_service),
 ) -> AttendanceRead:
-    """Create a new attendance listing"""
-    created_attendance = await attendance_service.create_attendance(session, attendance)
-    return AttendanceRead.model_validate(created_attendance)
+    """Create a new attendance record"""
+    try:
+        created_attendance = await attendance_service.create_attendance(session, attendance)
+        return AttendanceRead.model_validate(created_attendance)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
 
 
 @router.delete("/{attendance_id}", status_code=status.HTTP_204_NO_CONTENT)
