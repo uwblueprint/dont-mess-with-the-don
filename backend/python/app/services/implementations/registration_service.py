@@ -86,19 +86,13 @@ class RegistrationService(IRegistrationService):
                 registration_data.status is not None
                 and registration_data.status != registration.status
             ):
-                if registration.status == RegistrationStatusEnum.WAITLIST:
-                    if registration_data.status != RegistrationStatusEnum.ACCEPTED:
-                        raise ValueError(
-                            f"Cannot transition status from {registration.status.value} "
-                            f"to {registration_data.status.value}"
-                        )
-                elif registration.status == RegistrationStatusEnum.ACCEPTED:
-                    if registration_data.status != RegistrationStatusEnum.CANCELLED:
-                        raise ValueError(
-                            f"Cannot transition status from {registration.status.value} "
-                            f"to {registration_data.status.value}"
-                        )
-                elif registration.status == RegistrationStatusEnum.CANCELLED:
+                allowed_transitions = {
+                    RegistrationStatusEnum.WAITLIST: {RegistrationStatusEnum.ACCEPTED},
+                    RegistrationStatusEnum.ACCEPTED: {RegistrationStatusEnum.CANCELLED},
+                    RegistrationStatusEnum.CANCELLED: set(),
+                }
+                allowed = allowed_transitions.get(registration.status, set())
+                if registration_data.status not in allowed:
                     raise ValueError(
                         f"Cannot transition status from {registration.status.value} "
                         f"to {registration_data.status.value}"
