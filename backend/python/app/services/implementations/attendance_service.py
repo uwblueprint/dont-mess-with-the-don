@@ -39,9 +39,7 @@ class AttendanceService(IAttendanceService):
             await session.rollback()
             raise
 
-    async def get_attendance(
-        self, session: AsyncSession, attendance_id: int
-    ) -> Attendance | None:
+    async def get_attendance(self, session: AsyncSession, attendance_id: int) -> Attendance | None:
         statement = select(Attendance).where(Attendance.id == attendance_id)
         result = await session.execute(statement)
         return result.scalars().first()
@@ -61,9 +59,7 @@ class AttendanceService(IAttendanceService):
         result = await session.execute(statement)
         return list(result.scalars().all())
 
-    async def delete_attendance(
-        self, session: AsyncSession, attendance_id: int
-    ) -> bool:
+    async def delete_attendance(self, session: AsyncSession, attendance_id: int) -> bool:
         """Delete attendance by ID"""
         try:
             attendance = await self.get_attendance(session, attendance_id)
