@@ -78,6 +78,7 @@ def init_app(_app: Any | None = None) -> None:
     from .attendance import Attendance  # noqa: F401
     from .entity import Entity  # noqa: F401
     from .event import Event  # noqa: F401
+    from .event_series import EventSeries  # noqa: F401
     from .event_type import EventType  # noqa: F401
     from .form_submission import FormSubmission  # noqa: F401
     from .registration import Registration  # noqa: F401
