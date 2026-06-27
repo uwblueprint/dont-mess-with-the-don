@@ -7,6 +7,7 @@ Create Date: 2026-06-27 20:40:02.578382
 """
 from alembic import op
 import sqlalchemy as sa
+import sqlmodel
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
@@ -38,8 +39,8 @@ def upgrade():
     op.add_column('events', sa.Column('event_type_id', sa.Uuid(), nullable=True))
     op.add_column('events', sa.Column('event_series_id', sa.Uuid(), nullable=True))
     op.drop_constraint(op.f('events_event_type_fkey'), 'events', type_='foreignkey')
-    op.create_foreign_key(None, 'events', 'event_types', ['event_type_id'], ['id'])
-    op.create_foreign_key(None, 'events', 'event_series', ['event_series_id'], ['id'])
+    op.create_foreign_key('events_event_type_id_fkey', 'events', 'event_types', ['event_type_id'], ['id'])
+    op.create_foreign_key('events_event_series_id_fkey', 'events', 'event_series', ['event_series_id'], ['id'])
     op.drop_column('events', 'event_type')
     op.drop_column('events', 'recurrence')
     op.add_column('simple_entities', sa.Column('created_at', sa.DateTime(), nullable=True))
@@ -67,8 +68,8 @@ def downgrade():
     op.drop_column('simple_entities', 'created_at')
     op.add_column('events', sa.Column('recurrence', sa.VARCHAR(length=255), autoincrement=False, nullable=False))
     op.add_column('events', sa.Column('event_type', sa.UUID(), autoincrement=False, nullable=True))
-    op.drop_constraint(None, 'events', type_='foreignkey')
-    op.drop_constraint(None, 'events', type_='foreignkey')
+    op.drop_constraint('events_event_series_id_fkey', 'events', type_='foreignkey')
+    op.drop_constraint('events_event_type_id_fkey', 'events', type_='foreignkey')
     op.create_foreign_key(op.f('events_event_type_fkey'), 'events', 'event_types', ['event_type'], ['id'])
     op.drop_column('events', 'event_series_id')
     op.drop_column('events', 'event_type_id')
