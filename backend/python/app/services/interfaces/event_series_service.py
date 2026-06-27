@@ -14,7 +14,9 @@ class IEventSeriesService(ABC):
         pass
 
     @abstractmethod
-    async def get_event_series(self, session: AsyncSession, event_series_id: UUID) -> EventSeries | None:
+    async def get_event_series(
+        self, session: AsyncSession, event_series_id: UUID
+    ) -> EventSeries | None:
         pass
 
     @abstractmethod
