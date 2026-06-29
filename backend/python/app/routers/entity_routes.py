@@ -19,7 +19,10 @@ async def get_entities(
         entities = await entity_service.get_entities(session)
         return [EntityRead.model_validate(entity) for entity in entities]
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
 
 
 @router.get("/{entity_id}", response_model=EntityRead)
@@ -29,7 +32,13 @@ async def get_entity(
     entity_service: EntityService = Depends(get_entity_service),
 ) -> EntityRead:
     """Get a single entity by ID"""
-    entity = await entity_service.get_entity(session, entity_id)
+    try:
+        entity = await entity_service.get_entity(session, entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not entity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -49,10 +58,13 @@ async def create_entity(
         created_entity = await entity_service.create_entity(session, entity)
         return EntityRead.model_validate(created_entity)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
 
 
-@router.put("/{entity_id}", response_model=EntityRead)
+@router.patch("/{entity_id}", response_model=EntityRead)
 async def update_entity(
     entity_id: int,
     entity: EntityUpdate,
@@ -60,7 +72,13 @@ async def update_entity(
     entity_service: EntityService = Depends(get_entity_service),
 ) -> EntityRead:
     """Update an existing entity"""
-    updated_entity = await entity_service.update_entity(session, entity_id, entity)
+    try:
+        updated_entity = await entity_service.update_entity(session, entity_id, entity)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not updated_entity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -76,7 +94,13 @@ async def delete_entity(
     entity_service: EntityService = Depends(get_entity_service),
 ) -> None:
     """Delete an entity"""
-    success = await entity_service.delete_entity(session, entity_id)
+    try:
+        success = await entity_service.delete_entity(session, entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

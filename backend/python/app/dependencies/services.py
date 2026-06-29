@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.services.implementations.entity_service import EntityService
+from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService
 
@@ -17,6 +18,13 @@ def get_entity_service() -> EntityService:
     """Get entity service instance"""
     logger = get_logger()
     return EntityService(logger)
+
+
+@lru_cache
+def get_registration_service() -> RegistrationService:
+    """Get registration service instance"""
+    logger = get_logger()
+    return RegistrationService(logger)
 
 
 @lru_cache

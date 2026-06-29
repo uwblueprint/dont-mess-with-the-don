@@ -20,7 +20,10 @@ async def get_simple_entities(
         entities = await simple_entity_service.get_simple_entities(session)
         return [SimpleEntityRead.model_validate(entity) for entity in entities]
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
 
 
 @router.get("/{simple_entity_id}", response_model=SimpleEntityRead)
@@ -30,7 +33,13 @@ async def get_simple_entity(
     simple_entity_service: SimpleEntityService = Depends(get_simple_entity_service),
 ) -> SimpleEntityRead:
     """Get a single simple entity by ID"""
-    entity = await simple_entity_service.get_simple_entity(session, simple_entity_id)
+    try:
+        entity = await simple_entity_service.get_simple_entity(session, simple_entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not entity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -50,10 +59,13 @@ async def create_simple_entity(
         created_entity = await simple_entity_service.create_simple_entity(session, entity)
         return SimpleEntityRead.model_validate(created_entity)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
 
 
-@router.put("/{simple_entity_id}", response_model=SimpleEntityRead)
+@router.patch("/{simple_entity_id}", response_model=SimpleEntityRead)
 async def update_simple_entity(
     simple_entity_id: int,
     entity: SimpleEntityUpdate,
@@ -61,9 +73,15 @@ async def update_simple_entity(
     simple_entity_service: SimpleEntityService = Depends(get_simple_entity_service),
 ) -> SimpleEntityRead:
     """Update an existing simple entity"""
-    updated_entity = await simple_entity_service.update_simple_entity(
-        session, simple_entity_id, entity
-    )
+    try:
+        updated_entity = await simple_entity_service.update_simple_entity(
+            session, simple_entity_id, entity
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not updated_entity:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -79,7 +97,13 @@ async def delete_simple_entity(
     simple_entity_service: SimpleEntityService = Depends(get_simple_entity_service),
 ) -> None:
     """Delete a simple entity"""
-    success = await simple_entity_service.delete_simple_entity(session, simple_entity_id)
+    try:
+        success = await simple_entity_service.delete_simple_entity(session, simple_entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
