@@ -23,6 +23,7 @@ from app.models.event_type import EventType  # noqa: E402, F401
 from app.models.attendance import Attendance  # noqa: E402, F401
 from app.models.registration import Registration  # noqa: E402, F401
 from app.models.form_submission import FormSubmission  # noqa: E402, F401
+from app.models.confirmation_requests import ConfirmationRequest  # noqa: E402, F401
 
 # Alembic Config object
 config = context.config
