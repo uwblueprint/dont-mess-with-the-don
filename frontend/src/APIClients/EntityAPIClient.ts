@@ -69,7 +69,7 @@ const update = async (
   },
 ): Promise<EntityResponse | null> => {
   try {
-    const { data } = await baseAPIClient.put(`/entities/${id}`, entityData);
+    const { data } = await baseAPIClient.patch(`/entities/${id}`, entityData);
     return data;
   } catch (error) {
     return null;

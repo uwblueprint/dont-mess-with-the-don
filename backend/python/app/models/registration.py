@@ -15,7 +15,7 @@ class RegistrationBase(SQLModel):
     user_id: int = Field(foreign_key="users.id")
     event_instance_id: UUID = Field(foreign_key="events.id")
     status: RegistrationStatusEnum = Field(
-        default=RegistrationStatusEnum.REGISTERED,
+        default=RegistrationStatusEnum.WAITLIST,
         sa_column=Column(
             Enum(
                 RegistrationStatusEnum,

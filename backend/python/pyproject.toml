@@ -11,6 +11,7 @@ quote-style = "double"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["."]
 
 [tool.mypy]
 python_version = "3.11"
