@@ -1,8 +1,8 @@
 import logging
 from functools import lru_cache
 
-from app.services.implementations.event_service import EventService
 from app.services.implementations.entity_service import EntityService
+from app.services.implementations.event_service import EventService
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService

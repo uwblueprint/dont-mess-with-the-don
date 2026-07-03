@@ -9,7 +9,7 @@ from app.models import get_session
 from app.models.event import EventCreate, EventRead, EventUpdate
 from app.services.implementations.event_service import EventService
 
-router = APIRouter(prefix="/api/events", tags=["events"])
+router = APIRouter(prefix="/events", tags=["events"])
 
 
 @router.get("", response_model=list[EventRead])
