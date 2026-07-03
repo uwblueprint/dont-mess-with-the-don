@@ -6,7 +6,7 @@ import pytest
 from app.dependencies.services import get_event_service
 from app.models.event import EventCreate, EventRead, EventUpdate
 
-BASE = "/api/events"
+BASE = "/events"
 
 
 def make_event(**overrides):

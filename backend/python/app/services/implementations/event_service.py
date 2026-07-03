@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -31,7 +32,7 @@ class EventService:
         if event_type is not None:
             statement = statement.where(Event.event_type == event_type)
         if location is not None:
-            statement = statement.where(Event.location == location)
+            statement = statement.where(func.lower(Event.location) == location.lower())
         if starts_after is not None:
             statement = statement.where(Event.start_time >= starts_after)
         if starts_before is not None:
