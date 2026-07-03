@@ -48,10 +48,13 @@ async def create_event_type(
         created_event_type = await event_type_service.create_event_type(session, event_type_data)
         return EventTypeRead.model_validate(created_event_type)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create event type",
+        ) from e
 
 
-@router.put("/{event_type_id}", response_model=EventTypeRead)
+@router.patch("/{event_type_id}", response_model=EventTypeRead)
 async def update_event_type(
     event_type_id: UUID,
     event_type_data: EventTypeUpdate,
@@ -64,7 +67,10 @@ async def update_event_type(
             session, event_type_id, event_type_data
         )
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update event type",
+        ) from e
 
     if not updated_event_type:
         raise HTTPException(
@@ -84,7 +90,10 @@ async def delete_event_type(
     try:
         deleted = await event_type_service.delete_event_type(session, event_type_id)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete event type",
+        ) from e
 
     if not deleted:
         raise HTTPException(
