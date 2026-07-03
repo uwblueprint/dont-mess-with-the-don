@@ -40,10 +40,7 @@ async def get_attendance_list(
         user_id,
         event_instance_id,
     )
-    return [
-        AttendanceRead.model_validate(attendance)
-        for attendance in attendance_records
-    ]
+    return [AttendanceRead.model_validate(attendance) for attendance in attendance_records]
 
 
 @router.post("/", response_model=AttendanceRead, status_code=status.HTTP_201_CREATED)

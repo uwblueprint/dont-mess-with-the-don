@@ -1,9 +1,8 @@
 import logging
-
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models.attendance import Attendance, AttendanceCreate
@@ -18,6 +17,17 @@ class AttendanceService(IAttendanceService):
         self, session: AsyncSession, attendance_data: AttendanceCreate
     ) -> Attendance:
         """Create new attendance record"""
+        existing = await session.execute(
+            select(Attendance).where(
+                Attendance.user_id == attendance_data.user_id,
+                Attendance.event_instance_id == attendance_data.event_instance_id,
+            )
+        )
+        if existing.scalars().first():
+            raise ValueError(
+                f"Attendance for user_id={attendance_data.user_id} and "
+                f"event_instance_id={attendance_data.event_instance_id} already exists"
+            )
         try:
             attendance = Attendance(**attendance_data.model_dump())
             session.add(attendance)
@@ -30,10 +40,15 @@ class AttendanceService(IAttendanceService):
                 f"Integrity error creating attendance: user_id={attendance_data.user_id}, "
                 f"event_instance_id={attendance_data.event_instance_id}"
             )
-            raise ValueError(
-                f"Attendance for user_id={attendance_data.user_id} and "
-                f"event_instance_id={attendance_data.event_instance_id} already exists"
-            ) from error
+
+            constraint_name = getattr(error.orig, "constraint_name", None)
+            if constraint_name == "attendance_user_id_event_instance_id_key":
+                raise ValueError(
+                    f"Attendance for user_id={attendance_data.user_id} and "
+                    f"event_instance_id={attendance_data.event_instance_id} already exists"
+                ) from error
+
+            raise
         except Exception as error:
             self.logger.error(f"Failed to create attendance: {error!s}")
             await session.rollback()
