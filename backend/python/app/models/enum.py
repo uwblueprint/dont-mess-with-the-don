@@ -27,6 +27,6 @@ class SimpleEntityEnum(str, Enum):
 
 
 class RegistrationStatusEnum(str, Enum):
-    REGISTERED = "registered"
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
+    WAITLIST = "waitlist"
