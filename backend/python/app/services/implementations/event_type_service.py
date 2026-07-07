@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -42,6 +43,12 @@ class EventTypeService(IEventTypeService):
             await session.commit()
             await session.refresh(event_type)
             return event_type
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(f"Duplicate event type name on create: {event_type_data.name}")
+            raise ValueError(
+                f"Event type with name {event_type_data.name} already exists"
+            ) from error
         except Exception as error:
             self.logger.error(f"Failed to create event type: {error!s}")
             await session.rollback()
@@ -67,6 +74,12 @@ class EventTypeService(IEventTypeService):
             await session.commit()
             await session.refresh(event_type)
             return event_type
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(f"Duplicate event type name on update: {event_type_data.name}")
+            raise ValueError(
+                f"Event type with name {event_type_data.name} already exists"
+            ) from error
         except Exception as error:
             self.logger.error(f"Failed to update event type: {error!s}")
             await session.rollback()

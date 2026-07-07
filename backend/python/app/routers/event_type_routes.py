@@ -47,6 +47,8 @@ async def create_event_type(
     try:
         created_event_type = await event_type_service.create_event_type(session, event_type_data)
         return EventTypeRead.model_validate(created_event_type)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -66,6 +68,8 @@ async def update_event_type(
         updated_event_type = await event_type_service.update_event_type(
             session, event_type_id, event_type_data
         )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
