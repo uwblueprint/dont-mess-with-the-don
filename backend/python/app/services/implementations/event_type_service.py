@@ -67,7 +67,7 @@ class EventTypeService(IEventTypeService):
                 self.logger.error(f"Event type with id {event_type_id} not found")
                 return None
 
-            update_data = event_type_data.model_dump(exclude_unset=True)
+            update_data = event_type_data.model_dump(exclude_unset=True, exclude_none=True)
             for field, value in update_data.items():
                 setattr(event_type, field, value)
 
