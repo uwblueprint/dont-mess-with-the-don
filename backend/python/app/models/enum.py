@@ -30,3 +30,13 @@ class RegistrationStatusEnum(str, Enum):
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
     WAITLIST = "waitlist"
+
+
+class QuestionTypeEnum(str, Enum):
+    SHORT_ANSWER = "short_answer"
+    PARAGRAPH = "paragraph"
+    MULTIPLE_CHOICE = "multiple_choice"
+    CHECKBOXES = "checkboxes"
+    DATE = "date"
+    TIME = "time"
+    EMAIL = "email"

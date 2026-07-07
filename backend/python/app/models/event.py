@@ -1,11 +1,13 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy import ARRAY, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
 
 
 class EventBase(SQLModel):
@@ -24,6 +26,11 @@ class EventBase(SQLModel):
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     recurrence: str = Field(min_length=1, max_length=255)
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
 
 
 class Event(EventBase, BaseModel, table=True):
@@ -63,3 +70,8 @@ class EventUpdate(SQLModel):
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     form_json: dict | None = Field(default=None)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)

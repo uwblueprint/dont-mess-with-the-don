@@ -1,9 +1,11 @@
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
 
 
 class EventTypeBase(SQLModel):
@@ -16,6 +18,11 @@ class EventTypeBase(SQLModel):
     max_attendees: int = Field(ge=0)
     cancellation_cutoff_hours: int = Field(default=48, ge=0)
     form_json: dict = Field(default_factory=dict, sa_column=Column(JSONB))
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict) -> dict:
+        return validate_form_json(value) or {}
 
 
 class EventType(EventTypeBase, BaseModel, table=True):
@@ -48,3 +55,8 @@ class EventTypeUpdate(SQLModel):
     max_attendees: int | None = Field(default=None, ge=0)
     cancellation_cutoff_hours: int | None = Field(default=None, ge=0)
     form_json: dict | None = Field(default=None)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
