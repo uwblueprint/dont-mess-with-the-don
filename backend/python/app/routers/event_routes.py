@@ -1,7 +1,8 @@
 from datetime import date, datetime, time
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status as http_status
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.services import get_event_service
