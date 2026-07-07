@@ -30,7 +30,7 @@ def app():
 
 
 @pytest_asyncio.fixture
-async def client(app):
+async def session_maker():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
     from app.models import init_app as init_models
@@ -41,8 +41,13 @@ async def client(app):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    yield async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def client(app, session_maker):
     async def override_get_session():
         async with session_maker() as session:
             yield session
@@ -53,4 +58,3 @@ async def client(app):
         yield ac
 
     app.dependency_overrides.clear()
-    await engine.dispose()
