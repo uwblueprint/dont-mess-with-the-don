@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.services.implementations.entity_service import EntityService
+from app.services.implementations.event_service import EventService
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService
@@ -32,6 +33,13 @@ def get_simple_entity_service() -> SimpleEntityService:
     """Get simple entity service instance"""
     logger = get_logger()
     return SimpleEntityService(logger)
+
+
+@lru_cache
+def get_event_service() -> EventService:
+    """Get event service instance"""
+    logger = get_logger()
+    return EventService(logger)
 
 
 @lru_cache
