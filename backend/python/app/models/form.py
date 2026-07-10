@@ -1,36 +1,19 @@
-"""Form definition and response schemas for event registration forms.
+"""Pydantic schemas for registration form JSON.
 
-A form definition is stored as JSON on ``event_types.form_json`` (the template
-for a recurring event) and may be overridden per event on ``events.form_json``.
-A user's answers are stored as a form response JSON on
-``form_submissions.response_json``; each user has at most one submission per
-event, and submitting again edits the existing submission.
+Contains the form definition models (FormDefinition, FormSection, FormQuestion,
+FormOption), the form response model (FormResponse), and the column helpers used
+by the Event/EventType models (validate_form_json) and the FormSubmission models
+(validate_response_json). Structural rules are enforced as model validators, so
+an invalid definition or response shape can never be constructed.
 
-Authoring rules:
-- Sections are ordered; the first section is the entry point of the form.
-- Conditional logic (multiple routes through the form) is expressed with
-  ``goToSection`` on multiple choice options. Each section may contain at most
-  one multiple choice question with routing options.
-- A yes/no question should be modelled as a multiple choice question with two
-  options.
-- If the answered routing option has no ``goToSection`` (or the routing
-  question was not answered), the section's ``defaultNext`` is used.
-  ``defaultNext: null`` marks a terminal section.
-- Question ids must be unique across the form; option ids must be unique
-  within their question. Section routing must not form a cycle.
-
-In a response, ``path`` records the sections the respondent traversed and
-``answers`` maps question ids to answers (``""`` / ``[]`` mean unanswered).
+Validating a response against a form definition is business logic and lives in
+app.utilities.form_validation. The form JSON structure is documented in the
+"Registration Forms" section of the repository README.
 """
-
-import re
-from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .enum import QuestionTypeEnum
-
-_EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class FormOption(BaseModel):
@@ -191,6 +174,12 @@ class FormResponse(BaseModel):
 def validate_form_json(value: dict | None) -> dict | None:
     """Validate a form_json column value; None and {} mean 'no form'.
 
+    Parsing through FormDefinition enforces the structural authoring rules
+    defined above: unique section/question/option ids, options present only on
+    choice questions, at most one conditional multiple choice question per
+    section, all goToSection/defaultNext targets existing, and no routing
+    cycles.
+
     Returns the normalized definition JSON on success, raises ValueError otherwise.
     """
     if not value:
@@ -201,126 +190,14 @@ def validate_form_json(value: dict | None) -> dict | None:
 def validate_response_json(value: dict | None) -> dict | None:
     """Validate a response_json column value's shape; None and {} mean 'no response'.
 
-    This only guarantees the stored JSON is shaped like a FormResponse. Full
-    validation against the event's form definition (path, required questions,
-    answer types) needs the definition and happens in the form submission service.
+    Parsing through FormResponse only guarantees the stored JSON is shaped like
+    a response: formId and formVersion present, a non-empty path, answers as a
+    map of question id -> string or list of strings, and no unknown keys.
+
+    Full validation against the event's form definition (path routing, required
+    questions, answer types) needs the definition itself and happens in the form
+    submission service via app.utilities.form_validation.validate_form_response.
     """
     if not value:
         return value
     return FormResponse.model_validate(value).model_dump(mode="json", by_alias=True)
-
-
-def validate_form_response(definition: FormDefinition, response_json: dict) -> FormResponse:
-    """Validate a response against a form definition; raises ValueError on failure"""
-    response = FormResponse.model_validate(response_json)
-
-    if response.form_id != definition.form_id:
-        raise ValueError(
-            f"Response is for form '{response.form_id}' but the event's form "
-            f"is '{definition.form_id}'"
-        )
-    if response.form_version != definition.version:
-        raise ValueError(
-            f"Response is for form version {response.form_version} but the event's "
-            f"form is version {definition.version}"
-        )
-
-    sections = definition.sections_by_id
-    unknown_sections = [section_id for section_id in response.path if section_id not in sections]
-    if unknown_sections:
-        raise ValueError(f"Path references unknown sections: {unknown_sections}")
-    if response.path[0] != definition.sections[0].id:
-        raise ValueError(f"Path must start at section '{definition.sections[0].id}'")
-    if len(response.path) != len(set(response.path)):
-        raise ValueError("Path visits a section more than once")
-
-    _validate_path_transitions(response, sections)
-
-    path_questions = {
-        question.id: question
-        for section_id in response.path
-        for question in sections[section_id].questions
-    }
-    for question_id in response.answers:
-        if question_id not in path_questions:
-            raise ValueError(
-                f"Answer given for question '{question_id}' which is not on the response path"
-            )
-
-    for question in path_questions.values():
-        answer = response.answers.get(question.id)
-        if answer is None or answer == "" or answer == []:
-            if question.required:
-                raise ValueError(f"Question '{question.id}' is required")
-            continue
-        error = _validate_answer(question, answer)
-        if error:
-            raise ValueError(error)
-
-    return response
-
-
-def _validate_path_transitions(response: FormResponse, sections: dict[str, FormSection]) -> None:
-    """Check that each step of the path follows the section routing rules"""
-    for index, section_id in enumerate(response.path):
-        section = sections[section_id]
-        expected_next = section.default_next
-        routing_question = section.routing_question
-        if routing_question is not None:
-            answer = response.answers.get(routing_question.id)
-            if isinstance(answer, str) and answer:
-                option = next(
-                    (opt for opt in routing_question.options or [] if opt.id == answer),
-                    None,
-                )
-                if option is not None and option.go_to_section is not None:
-                    expected_next = option.go_to_section
-
-        if index == len(response.path) - 1:
-            if expected_next is not None:
-                raise ValueError(
-                    f"Path ends at section '{section_id}' but the form continues "
-                    f"to '{expected_next}'"
-                )
-        elif response.path[index + 1] != expected_next:
-            raise ValueError(
-                f"Invalid path: section '{section_id}' leads to '{expected_next}' "
-                f"but path goes to '{response.path[index + 1]}'"
-            )
-
-
-def _validate_answer(question: FormQuestion, answer: str | list[str]) -> str | None:
-    """Return an error message if the answer does not match the question type"""
-    if question.type == QuestionTypeEnum.CHECKBOXES:
-        if not isinstance(answer, list):
-            return f"Question '{question.id}' expects a list of option ids"
-        if len(answer) != len(set(answer)):
-            return f"Question '{question.id}' has duplicate selections"
-        option_ids = {option.id for option in question.options or []}
-        invalid = [selection for selection in answer if selection not in option_ids]
-        if invalid:
-            return f"Question '{question.id}' has invalid selections: {invalid}"
-        return None
-
-    if not isinstance(answer, str):
-        return f"Question '{question.id}' expects a single string answer"
-
-    if question.type == QuestionTypeEnum.MULTIPLE_CHOICE:
-        option_ids = {option.id for option in question.options or []}
-        if answer not in option_ids:
-            return f"Question '{question.id}' has invalid selection '{answer}'"
-    elif question.type == QuestionTypeEnum.EMAIL:
-        if not _EMAIL_REGEX.match(answer):
-            return f"Question '{question.id}' expects a valid email address"
-    elif question.type == QuestionTypeEnum.DATE:
-        try:
-            datetime.strptime(answer, "%Y-%m-%d")
-        except ValueError:
-            return f"Question '{question.id}' expects a date in YYYY-MM-DD format"
-    elif question.type == QuestionTypeEnum.TIME:
-        try:
-            datetime.strptime(answer, "%H:%M")
-        except ValueError:
-            return f"Question '{question.id}' expects a time in HH:MM format"
-
-    return None

@@ -3,12 +3,8 @@ import copy
 import pytest
 from pydantic import ValidationError
 
-from app.models.form import (
-    FormDefinition,
-    validate_form_json,
-    validate_form_response,
-    validate_response_json,
-)
+from app.models.form import FormDefinition, validate_form_json, validate_response_json
+from app.utilities.form_validation import validate_form_response
 
 WORKSHOP_FORM = {
     "formId": "frm_workshop_signup",

@@ -8,7 +8,7 @@ from sqlmodel import select
 
 from app.models.event import Event
 from app.models.event_type import EventType
-from app.models.form import FormDefinition, validate_form_response
+from app.models.form import FormDefinition
 from app.models.form_submission import (
     FormSubmission,
     FormSubmissionCreate,
@@ -16,6 +16,7 @@ from app.models.form_submission import (
 )
 from app.models.registration import Registration
 from app.services.interfaces.form_submission_service import IFormSubmissionService
+from app.utilities.form_validation import validate_form_response
 
 
 class FormSubmissionService(IFormSubmissionService):
