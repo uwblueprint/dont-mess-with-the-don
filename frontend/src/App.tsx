@@ -73,7 +73,7 @@ const App = (): React.ReactElement => {
               component={SimpleEntityDisplayPage}
             />
             <Route exact path={Routes.HOOKS_PAGE} component={HooksDemo} />
-            <Route exact path = {Routes.QR_CODE_POC_PAGE} component={QRCodePOC} />
+            <Route exact path={Routes.QR_CODE_POC_PAGE} component={QRCodePOC} />
             <Route exact path="*" component={NotFound} />
           </Switch>
         </Router>
