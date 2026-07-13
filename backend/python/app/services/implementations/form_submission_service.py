@@ -53,16 +53,35 @@ class FormSubmissionService:
         try:
             statement = select(FormSubmission).where(FormSubmission.id == form_submission_id)
             result = await session.execute(statement)
-            form_submission_id = result.scalars().first()
+            form_submission = result.scalars().first()
 
-            if not form_submission_id:
-                self.logger.error(f"Entity with id {form_submission_id} not found")
+            if not form_submission:
+                self.logger.error(f"Entity {form_submission} not found")
                 return False
 
-            await session.delete(form_submission_id)
+            await session.delete(form_submission)
             await session.commit()
             return True
         except Exception as error:
             self.logger.error(f"Failed to delete entity: {error!s}")
+            await session.rollback()
+            raise error
+
+    async def update_form_submission(self, session: AsyncSession, form_submission_id: int, form_submission_data: FormSubmissionUpdate) -> FormSubmission | None:
+        """Update form submission by ID"""
+        try:
+            form_submission = await self.get_form_submission(session, form_submission_id)
+            if not form_submission:
+                self.logger.error(f"FormSubmission with id {form_submission_id} not found")
+                return None
+
+            for key, value in form_submission_data.model_dump().items():
+                setattr(form_submission, key, value)
+
+            await session.commit()
+            await session.refresh(form_submission)
+            return form_submission
+        except Exception as error:
+            self.logger.error(f"Failed to update form submission: {error!s}")
             await session.rollback()
             raise error

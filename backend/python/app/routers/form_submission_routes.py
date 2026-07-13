@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.services import get_form_submission_service # change 
+from uuid import UUID
+from app.dependencies.services import get_form_submission_service 
 from app.models import get_session
 from app.models.form_submission import FormSubmission, FormSubmissionCreate, FormSubmissionRead, FormSubmissionUpdate
 from app.services.implementations.form_submission_service import FormSubmissionService
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/form_submissions", tags=["form_submissions"])
 @router.get("/", response_model=list[FormSubmissionRead])
 async def get_form_submissions(
     user_id: int | None = None,
-    event_instance_id: int | None = None,
+    event_instance_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> list[FormSubmissionRead]:
@@ -30,13 +31,16 @@ async def get_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> FormSubmissionRead:
     """Get a single form submission by ID"""
-    form_submission = await form_submission_service.get_form_submission(session, form_submission_id)
-    if not form_submission:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"FormSubmission with id {form_submission_id} not found",
-        )
-    return FormSubmissionRead.model_validate(form_submission)
+    try: 
+        form_submission = await form_submission_service.get_form_submission(session, form_submission_id)
+        if not form_submission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"FormSubmission with id {form_submission_id} not found",
+            )
+        return FormSubmissionRead.model_validate(form_submission)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 @router.post("/", response_model=FormSubmissionRead, status_code=status.HTTP_201_CREATED)
 async def create_form_submission(
@@ -58,12 +62,15 @@ async def delete_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> None:
     """Delete a form submission by ID"""
-    success = await form_submission_service.delete_form_submission(session, form_submission_id)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"FormSubmission with id {form_submission_id} not found",
-        )
+    try: 
+        success = await form_submission_service.delete_form_submission(session, form_submission_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"FormSubmission with id {form_submission_id} not found",
+            )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 @router.patch("/{form_submission_id}", response_model=FormSubmissionRead)
 async def update_form_submission(
@@ -73,12 +80,15 @@ async def update_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> FormSubmissionRead:
     """Update an existing form submission"""
-    updated_form_submission = await form_submission_service.update_form_submission(
-        session, form_submission_id, form_submission
-    )
-    if not updated_form_submission:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"FormSubmission with id {form_submission_id} not found",
+    try: 
+        updated_form_submission = await form_submission_service.update_form_submission(
+            session, form_submission_id, form_submission
         )
-    return FormSubmissionRead.model_validate(updated_form_submission)
+        if not updated_form_submission:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"FormSubmission with id {form_submission_id} not found",
+            )
+        return FormSubmissionRead.model_validate(updated_form_submission)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e

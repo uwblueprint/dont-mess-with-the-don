@@ -4,6 +4,7 @@ from functools import lru_cache
 from app.services.implementations.entity_service import EntityService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService
+from app.services.implementations.form_submission_service import FormSubmissionService
 
 
 @lru_cache
@@ -31,3 +32,9 @@ def get_user_service() -> UserService:
     """Get user service instance"""
     logger = get_logger()
     return UserService(logger)
+
+@lru_cache
+def get_form_submission_service() -> FormSubmissionService:
+    """Get form submission service instance"""
+    logger = get_logger()
+    return FormSubmissionService(logger)
