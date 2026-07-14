@@ -59,3 +59,7 @@ def get_settings() -> Settings:
 
 # Global settings instance
 settings = get_settings()
+
+
+# Scheduler
+scheduler_timezone: str = Field(default="America/New_York")

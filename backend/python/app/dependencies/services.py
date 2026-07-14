@@ -4,6 +4,7 @@ from functools import lru_cache
 from app.services.implementations.entity_service import EntityService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.registration_service import RegistrationService
+from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService
 
@@ -47,3 +48,10 @@ def get_user_service() -> UserService:
     """Get user service instance"""
     logger = get_logger()
     return UserService(logger)
+
+
+@lru_cache
+def get_scheduler_service() -> SchedulerService:
+    """Get scheduler service instance"""
+    logger = get_logger()
+    return SchedulerService(logger)
