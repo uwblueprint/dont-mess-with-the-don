@@ -11,7 +11,6 @@ app/
       scheduler_service.py    # Central scheduler management
     jobs/
       __init__.py            # init_jobs() - registers all jobs
-      driver_history_jobs.py # Example job implementation
       README.md              # This file
 ```
 
