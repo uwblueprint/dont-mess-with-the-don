@@ -1,18 +1,17 @@
-"""Update app.models.events to track recurrence through event_series_id
+"""add event series table to track event recurrence
 
-Revision ID: e4694403085d
-Revises: b945a06e4bdd
-Create Date: 2026-06-27 20:40:02.578382
+Revision ID: ade5c04e9b79
+Revises: 0746657dd317
+Create Date: 2026-07-17 02:28:47.983607
 
 """
 from alembic import op
 import sqlalchemy as sa
-import sqlmodel
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e4694403085d'
-down_revision = 'b945a06e4bdd'
+revision = 'ade5c04e9b79'
+down_revision = '0746657dd317'
 branch_labels = None
 depends_on = None
 
@@ -24,7 +23,24 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('recurrence', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('description', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('location', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('max_attendees', sa.Integer(), nullable=False),
+    sa.Column('max_waitlist', sa.Integer(), nullable=False),
+    sa.Column('event_type_id', sa.Uuid(), nullable=True),
+    sa.Column('event_status', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('image', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('start_time', sa.DateTime(), nullable=False),
+    sa.Column('end_time', sa.DateTime(), nullable=False),
+    sa.Column('signup_start_time', sa.DateTime(), nullable=False),
+    sa.Column('signup_end_time', sa.DateTime(), nullable=False),
+    sa.Column('image_urls', sa.ARRAY(sa.String()), nullable=True),
+    sa.Column('notes', sa.ARRAY(sa.String()), nullable=True),
+    sa.Column('format', sa.Enum('signup', 'dropin', name='eventformatenum'), nullable=False),
+    sa.Column('registration_type', sa.Enum('lottery', 'auto_approve', 'manual_approve', name='eventregistrationtypeenum'), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
+    sa.ForeignKeyConstraint(['event_type_id'], ['event_types.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.add_column('entities', sa.Column('created_at', sa.DateTime(), nullable=True))
@@ -39,8 +55,8 @@ def upgrade():
     op.add_column('events', sa.Column('event_type_id', sa.Uuid(), nullable=True))
     op.add_column('events', sa.Column('event_series_id', sa.Uuid(), nullable=True))
     op.drop_constraint(op.f('events_event_type_fkey'), 'events', type_='foreignkey')
-    op.create_foreign_key('events_event_type_id_fkey', 'events', 'event_types', ['event_type_id'], ['id'])
-    op.create_foreign_key('events_event_series_id_fkey', 'events', 'event_series', ['event_series_id'], ['id'])
+    op.create_foreign_key(None, 'events', 'event_types', ['event_type_id'], ['id'])
+    op.create_foreign_key(None, 'events', 'event_series', ['event_series_id'], ['id'])
     op.drop_column('events', 'event_type')
     op.drop_column('events', 'recurrence')
     op.add_column('simple_entities', sa.Column('created_at', sa.DateTime(), nullable=True))
@@ -68,8 +84,8 @@ def downgrade():
     op.drop_column('simple_entities', 'created_at')
     op.add_column('events', sa.Column('recurrence', sa.VARCHAR(length=255), autoincrement=False, nullable=False))
     op.add_column('events', sa.Column('event_type', sa.UUID(), autoincrement=False, nullable=True))
-    op.drop_constraint('events_event_series_id_fkey', 'events', type_='foreignkey')
-    op.drop_constraint('events_event_type_id_fkey', 'events', type_='foreignkey')
+    op.drop_constraint(None, 'events', type_='foreignkey')
+    op.drop_constraint(None, 'events', type_='foreignkey')
     op.create_foreign_key(op.f('events_event_type_fkey'), 'events', 'event_types', ['event_type'], ['id'])
     op.drop_column('events', 'event_series_id')
     op.drop_column('events', 'event_type_id')

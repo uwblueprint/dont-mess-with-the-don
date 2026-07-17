@@ -1,9 +1,11 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import ARRAY, Enum, String
+from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .enum import EventFormatEnum, EventRegistrationTypeEnum
 
 
 class EventSeriesBase(SQLModel):
@@ -11,6 +13,40 @@ class EventSeriesBase(SQLModel):
 
     recurrence: str = Field(min_length=1, max_length=255)
     is_active: bool = Field(default=True)
+    name: str = Field(min_length=1, max_length=255)
+    description: str = Field(min_length=1)
+    location: str = Field(min_length=1, max_length=255)
+    max_attendees: int = Field(ge=0)
+    max_waitlist: int = Field(ge=0)
+    event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
+    event_status: str = Field(min_length=1, max_length=255)
+    image: str = Field(min_length=1)
+    start_time: datetime
+    end_time: datetime
+    signup_start_time: datetime
+    signup_end_time: datetime
+    image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    format: EventFormatEnum = Field(
+        sa_column=Column(
+            Enum(
+                EventFormatEnum,
+                values_callable=lambda obj: [e.value for e in obj],
+                name="eventformatenum",
+            ),
+            nullable=False,
+        ),
+    )
+    registration_type: EventRegistrationTypeEnum = Field(
+        sa_column=Column(
+            Enum(
+                EventRegistrationTypeEnum,
+                values_callable=lambda obj: [e.value for e in obj],
+                name="eventregistrationtypeenum",
+            ),
+            nullable=False,
+        ),
+    )
 
 
 class EventSeries(EventSeriesBase, BaseModel, table=True):
@@ -40,3 +76,19 @@ class EventSeriesUpdate(SQLModel):
 
     recurrence: str | None = Field(default=None, min_length=1, max_length=255)
     is_active: bool | None = Field(default=None)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, min_length=1)
+    location: str | None = Field(default=None, min_length=1, max_length=255)
+    max_attendees: int | None = Field(default=None, ge=0)
+    max_waitlist: int | None = Field(default=None, ge=0)
+    event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
+    event_status: str | None = Field(default=None, min_length=1, max_length=255)
+    image: str | None = Field(default=None, min_length=1)
+    start_time: datetime | None = Field(default=None)
+    end_time: datetime | None = Field(default=None)
+    signup_start_time: datetime | None = Field(default=None)
+    signup_end_time: datetime | None = Field(default=None)
+    image_urls: list[str] | None = Field(default=None)
+    notes: list[str] | None = Field(default=None)
+    format: EventFormatEnum | None = Field(default=None)
+    registration_type: EventRegistrationTypeEnum | None = Field(default=None)
