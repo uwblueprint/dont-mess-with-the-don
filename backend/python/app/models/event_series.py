@@ -5,7 +5,7 @@ from sqlalchemy import ARRAY, Enum, String
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
-from .enum import EventFormatEnum, EventRegistrationTypeEnum
+from .enum import EventRegistrationTypeEnum
 
 
 class EventSeriesBase(SQLModel):
@@ -23,20 +23,8 @@ class EventSeriesBase(SQLModel):
     image: str = Field(min_length=1)
     start_time: datetime
     end_time: datetime
-    signup_start_time: datetime
-    signup_end_time: datetime
     image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
-    format: EventFormatEnum = Field(
-        sa_column=Column(
-            Enum(
-                EventFormatEnum,
-                values_callable=lambda obj: [e.value for e in obj],
-                name="eventformatenum",
-            ),
-            nullable=False,
-        ),
-    )
     registration_type: EventRegistrationTypeEnum = Field(
         sa_column=Column(
             Enum(
@@ -86,9 +74,6 @@ class EventSeriesUpdate(SQLModel):
     image: str | None = Field(default=None, min_length=1)
     start_time: datetime | None = Field(default=None)
     end_time: datetime | None = Field(default=None)
-    signup_start_time: datetime | None = Field(default=None)
-    signup_end_time: datetime | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
-    format: EventFormatEnum | None = Field(default=None)
     registration_type: EventRegistrationTypeEnum | None = Field(default=None)

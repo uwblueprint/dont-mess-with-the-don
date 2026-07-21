@@ -32,12 +32,8 @@ class RegistrationStatusEnum(str, Enum):
     WAITLIST = "waitlist"
 
 
-class EventFormatEnum(str, Enum):
-    SIGNUP = "signup"
-    DROPIN = "dropin"
-
-
 class EventRegistrationTypeEnum(str, Enum):
     LOTTERY = "lottery"
     AUTO_APPROVE = "auto_approve"
     MANUAL_APPROVE = "manual_approve"
+    DROPIN = "dropin"
