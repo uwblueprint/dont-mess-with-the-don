@@ -1,9 +1,15 @@
 import logging
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models.form_submission import FormSubmission, FormSubmissionCreate, FormSubmissionRead, FormSubmissionUpdate
+from app.models.form_submission import (
+    FormSubmission,
+    FormSubmissionCreate,
+    FormSubmissionUpdate,
+)
+
 
 class FormSubmissionService:
     """Service for managing form submissions"""
@@ -11,7 +17,12 @@ class FormSubmissionService:
     def __init__(self, logger: logging.Logger):
         self.logger = logger
 
-    async def get_form_submissions(self, session: AsyncSession, user_id: int | None = None, event_instance_id: int | None = None) -> list[FormSubmission]:
+    async def get_form_submissions(
+        self,
+        session: AsyncSession,
+        user_id: int | None = None,
+        event_instance_id: UUID | None = None,
+    ) -> list[FormSubmission]:
         """Get all form submissions"""
         statement = select(FormSubmission)
 
@@ -19,11 +30,13 @@ class FormSubmissionService:
             statement = statement.where(FormSubmission.user_id == user_id)
         if event_instance_id is not None:
             statement = statement.where(FormSubmission.event_instance_id == event_instance_id)
-            
+
         result = await session.execute(statement)
         return list(result.scalars().all())
-    
-    async def get_form_submission(self, session: AsyncSession, submission_id: int) -> FormSubmission | None:
+
+    async def get_form_submission(
+        self, session: AsyncSession, submission_id: int
+    ) -> FormSubmission | None:
         """Get form submission by ID"""
         statement = select(FormSubmission).where(FormSubmission.id == submission_id)
         result = await session.execute(statement)
@@ -35,7 +48,9 @@ class FormSubmissionService:
 
         return form_submission
 
-    async def create_form_submission(self, session: AsyncSession, form_submission_data: FormSubmissionCreate) -> FormSubmission:
+    async def create_form_submission(
+        self, session: AsyncSession, form_submission_data: FormSubmissionCreate
+    ) -> FormSubmission:
         """Create new form submission"""
         try:
             form_submission = FormSubmission(**form_submission_data.model_dump())
@@ -67,7 +82,12 @@ class FormSubmissionService:
             await session.rollback()
             raise error
 
-    async def update_form_submission(self, session: AsyncSession, form_submission_id: int, form_submission_data: FormSubmissionUpdate) -> FormSubmission | None:
+    async def update_form_submission(
+        self,
+        session: AsyncSession,
+        form_submission_id: int,
+        form_submission_data: FormSubmissionUpdate,
+    ) -> FormSubmission | None:
         """Update form submission by ID"""
         try:
             form_submission = await self.get_form_submission(session, form_submission_id)

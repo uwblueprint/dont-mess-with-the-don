@@ -1,13 +1,19 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uuid import UUID
-from app.dependencies.services import get_form_submission_service 
+from app.dependencies.services import get_form_submission_service
 from app.models import get_session
-from app.models.form_submission import FormSubmission, FormSubmissionCreate, FormSubmissionRead, FormSubmissionUpdate
+from app.models.form_submission import (
+    FormSubmissionCreate,
+    FormSubmissionRead,
+    FormSubmissionUpdate,
+)
 from app.services.implementations.form_submission_service import FormSubmissionService
 
 router = APIRouter(prefix="/form_submissions", tags=["form_submissions"])
+
 
 @router.get("/", response_model=list[FormSubmissionRead])
 async def get_form_submissions(
@@ -18,12 +24,18 @@ async def get_form_submissions(
 ) -> list[FormSubmissionRead]:
     """Retrieve all form submissions"""
     try:
-        form_submissions = await form_submission_service.get_form_submissions(session, user_id=user_id, event_instance_id=event_instance_id)
+        form_submissions = await form_submission_service.get_form_submissions(
+            session, user_id=user_id, event_instance_id=event_instance_id
+        )
 
         return [FormSubmissionRead.model_validate(submission) for submission in form_submissions]
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
-    
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from error
+
+
 @router.get("/{form_submission_id}", response_model=FormSubmissionRead)
 async def get_form_submission(
     form_submission_id: int,
@@ -31,16 +43,24 @@ async def get_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> FormSubmissionRead:
     """Get a single form submission by ID"""
-    try: 
-        form_submission = await form_submission_service.get_form_submission(session, form_submission_id)
+    try:
+        form_submission = await form_submission_service.get_form_submission(
+            session, form_submission_id
+        )
         if not form_submission:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"FormSubmission with id {form_submission_id} not found",
             )
         return FormSubmissionRead.model_validate(form_submission)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from error
+
 
 @router.post("/", response_model=FormSubmissionRead, status_code=status.HTTP_201_CREATED)
 async def create_form_submission(
@@ -50,10 +70,16 @@ async def create_form_submission(
 ) -> FormSubmissionRead:
     """Create a new form submission"""
     try:
-        created_form_submission = await form_submission_service.create_form_submission(session, form_submission)
+        created_form_submission = await form_submission_service.create_form_submission(
+            session, form_submission
+        )
         return FormSubmissionRead.model_validate(created_form_submission)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from error
+
 
 @router.delete("/{form_submission_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_form_submission(
@@ -62,15 +88,21 @@ async def delete_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> None:
     """Delete a form submission by ID"""
-    try: 
+    try:
         success = await form_submission_service.delete_form_submission(session, form_submission_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"FormSubmission with id {form_submission_id} not found",
             )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from error
+
 
 @router.patch("/{form_submission_id}", response_model=FormSubmissionRead)
 async def update_form_submission(
@@ -80,7 +112,7 @@ async def update_form_submission(
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> FormSubmissionRead:
     """Update an existing form submission"""
-    try: 
+    try:
         updated_form_submission = await form_submission_service.update_form_submission(
             session, form_submission_id, form_submission
         )
@@ -90,5 +122,10 @@ async def update_form_submission(
                 detail=f"FormSubmission with id {form_submission_id} not found",
             )
         return FormSubmissionRead.model_validate(updated_form_submission)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from error
