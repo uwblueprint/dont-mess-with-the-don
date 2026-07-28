@@ -18,8 +18,8 @@ class EventBase(SQLModel):
     event_status: str = Field(min_length=1, max_length=255)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     image: str = Field(min_length=1)
-    start_time: datetime
-    end_time: datetime
+    start_datetime: datetime
+    end_datetime: datetime
     image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
@@ -59,8 +59,8 @@ class EventUpdate(SQLModel):
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
     image: str | None = Field(default=None, min_length=1)
-    start_time: datetime | None = Field(default=None)
-    end_time: datetime | None = Field(default=None)
+    start_datetime: datetime | None = Field(default=None)
+    end_datetime: datetime | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     recurrence: str | None = Field(default=None, min_length=1, max_length=255)

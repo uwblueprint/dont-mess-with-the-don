@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from uuid import UUID, uuid4
 
 from sqlalchemy import ARRAY, Enum, String
@@ -21,8 +21,8 @@ class EventSeriesBase(SQLModel):
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_status: str = Field(min_length=1, max_length=255)
     image: str = Field(min_length=1)
-    start_time: datetime
-    end_time: datetime
+    start_time: time
+    end_time: time
     image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     registration_type: EventRegistrationTypeEnum = Field(
@@ -72,8 +72,8 @@ class EventSeriesUpdate(SQLModel):
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
     image: str | None = Field(default=None, min_length=1)
-    start_time: datetime | None = Field(default=None)
-    end_time: datetime | None = Field(default=None)
+    start_time: time | None = Field(default=None)
+    end_time: time | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     registration_type: EventRegistrationTypeEnum | None = Field(default=None)
