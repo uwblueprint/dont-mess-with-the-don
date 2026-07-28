@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from . import (
     entity_routes,
     event_routes,
-    event_type_routes,
     event_series_routes,
+    event_type_routes,
     registration_routes,
     simple_entity_routes,
     user_routes,
