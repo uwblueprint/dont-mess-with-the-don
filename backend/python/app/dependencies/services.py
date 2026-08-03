@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.services.implementations.entity_service import EntityService
+from app.services.implementations.form_submission_service import FormSubmissionService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.registration_service import RegistrationService
@@ -49,6 +50,12 @@ def get_user_service() -> UserService:
     logger = get_logger()
     return UserService(logger)
 
+
+@lru_cache
+def get_form_submission_service() -> FormSubmissionService:
+    """Get form submission service instance"""
+    logger = get_logger()
+    return FormSubmissionService(logger)
 
 @lru_cache
 def get_event_type_service() -> EventTypeService:
