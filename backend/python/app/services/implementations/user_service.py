@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from app.models.user import User, UserCreate, UserUpdate
@@ -39,6 +40,18 @@ class UserService(IUserService):
         statement = select(User).where(User.email == email)
         result = await session.execute(statement)
         return result.scalars().first()
+
+    async def get_user_children(self, session: AsyncSession, user_id: int) -> list[User] | None:
+        """Get user by ID and return their children"""
+        statement = select(User).options(selectinload(User.children)).where(User.id == user_id)
+        result = await session.execute(statement)
+        user = result.scalars().first()
+
+        if not user:
+            self.logger.warning(f"User with id {user_id} not found")
+            return None
+
+        return user.children
 
     async def create_user(self, session: AsyncSession, user_data: UserCreate) -> User:
         """Create new user"""

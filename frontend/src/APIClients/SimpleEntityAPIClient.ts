@@ -69,7 +69,7 @@ const update = async (
   },
 ): Promise<SimpleEntityResponse | null> => {
   try {
-    const { data } = await baseAPIClient.put(
+    const { data } = await baseAPIClient.patch(
       `/simple-entities/${id}`,
       entityData,
     );
