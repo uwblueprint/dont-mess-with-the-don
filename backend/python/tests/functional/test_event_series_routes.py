@@ -14,8 +14,8 @@ def _test_payload(**overrides):
         "max_waitlist": 5,
         "event_status": "active",
         "image": "test.png",
-        "start_time": "2026-08-01T10:00:00",
-        "end_time": "2026-08-01T12:00:00",
+        "start_time": "10:00:00",
+        "end_time": "12:00:00",
         "registration_type": "lottery",
     }
     payload.update(overrides)
