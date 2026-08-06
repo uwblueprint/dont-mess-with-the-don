@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.services.implementations.entity_service import EntityService
+from app.services.implementations.event_series_service import EventSeriesService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.registration_service import RegistrationService
@@ -48,6 +49,13 @@ def get_user_service() -> UserService:
     """Get user service instance"""
     logger = get_logger()
     return UserService(logger)
+
+
+@lru_cache
+def get_event_series_service() -> EventSeriesService:
+    """Get event series service instance"""
+    logger = get_logger()
+    return EventSeriesService(logger)
 
 
 @lru_cache
