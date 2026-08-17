@@ -54,6 +54,13 @@ def get_user_service() -> UserService:
 
 
 @lru_cache
+def get_scheduler_service() -> SchedulerService:
+    """Get scheduler service instance"""
+    logger = get_logger()
+    return SchedulerService(logger)
+
+
+@lru_cache
 def get_attendance_service() -> AttendanceService:
     """Get attendance service instance"""
     logger = get_logger()
@@ -66,11 +73,13 @@ def get_event_series_service() -> EventSeriesService:
     logger = get_logger()
     return EventSeriesService(logger)
 
+
 @lru_cache
 def get_event_type_service() -> EventTypeService:
     """Get event type service instance"""
     logger = get_logger()
     return EventTypeService(logger)
+
 
 @lru_cache
 def get_scheduler_service() -> SchedulerService:
