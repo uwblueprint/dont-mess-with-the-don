@@ -1,3 +1,5 @@
+import json
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -54,3 +56,33 @@ async def client(app):
 
     app.dependency_overrides.clear()
     await engine.dispose()
+
+
+# SQLite's driver can't bind/read Python lists directly (unlike psycopg2's native array
+# support), so ARRAY columns need explicit (de)serialization when running under sqlite.
+_original_array_bind_processor = ARRAY.bind_processor
+_original_array_result_processor = ARRAY.result_processor
+
+
+def _array_bind_processor(self, dialect):
+    if dialect.name == "sqlite":
+
+        def process(value):
+            return json.dumps(value) if value is not None else None
+
+        return process
+    return _original_array_bind_processor(self, dialect)
+
+
+def _array_result_processor(self, dialect, coltype):
+    if dialect.name == "sqlite":
+
+        def process(value):
+            return json.loads(value) if value is not None else None
+
+        return process
+    return _original_array_result_processor(self, dialect, coltype)
+
+
+ARRAY.bind_processor = _array_bind_processor  # type: ignore[method-assign]
+ARRAY.result_processor = _array_result_processor  # type: ignore[method-assign]

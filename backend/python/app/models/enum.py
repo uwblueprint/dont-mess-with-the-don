@@ -30,3 +30,10 @@ class RegistrationStatusEnum(str, Enum):
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
     WAITLIST = "waitlist"
+
+
+class EventRegistrationTypeEnum(str, Enum):
+    LOTTERY = "lottery"
+    AUTO_APPROVE = "auto_approve"
+    MANUAL_APPROVE = "manual_approve"
+    DROPIN = "dropin"
