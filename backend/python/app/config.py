@@ -59,5 +59,6 @@ def get_settings() -> Settings:
 
     return EnvironmentSettings()
 
+
 # Global settings instance
 settings = get_settings()

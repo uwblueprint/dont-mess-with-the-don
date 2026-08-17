@@ -60,7 +60,7 @@ def get_scheduler_service() -> SchedulerService:
     return SchedulerService(logger)
 
 
-@lru_chche
+@lru_cache
 def get_attendance_service() -> AttendanceService:
     """Get attendance service instance"""
     logger = get_logger()
