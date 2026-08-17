@@ -1,0 +1,11 @@
+id,user_id,event_instance_id,status,registered_at,cancelled_at,is_late_cancellation,response_id
+1,1,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,accepted,2026-07-01T10:00:00,,false,1
+2,2,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,accepted,2026-07-01T11:30:00,,false,2
+3,3,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,cancelled,2026-07-02T09:00:00,2026-07-05T09:00:00,false,
+4,4,bbbbbbbb-bbbb-bbbb-bbbb-000000000004,accepted,2026-07-03T14:00:00,,false,3
+5,5,bbbbbbbb-bbbb-bbbb-bbbb-000000000004,accepted,2026-07-03T15:00:00,,false,
+6,1,bbbbbbbb-bbbb-bbbb-bbbb-000000000005,accepted,2026-07-04T08:00:00,,false,
+7,2,bbbbbbbb-bbbb-bbbb-bbbb-000000000005,accepted,2026-07-04T08:05:00,,false,
+8,3,bbbbbbbb-bbbb-bbbb-bbbb-000000000005,accepted,2026-07-04T08:10:00,,false,
+9,4,bbbbbbbb-bbbb-bbbb-bbbb-000000000005,waitlist,2026-07-04T08:15:00,,false,
+10,5,bbbbbbbb-bbbb-bbbb-bbbb-000000000005,waitlist,2026-07-04T08:20:00,,false,
