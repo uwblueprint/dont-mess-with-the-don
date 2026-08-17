@@ -45,7 +45,7 @@ class SchedulerService:
 
     def add_cron_job(
         self,
-        func: Callable,
+        func: Callable[[], Any],
         job_id: str,
         hour: int | str = "*",
         minute: int | str = "*",
@@ -71,13 +71,7 @@ class SchedulerService:
         if asyncio.iscoroutinefunction(func):
 
             def async_wrapper() -> None:
-                # Create new event loop for the background thread
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(func())
-                finally:
-                    loop.close()
+                asyncio.run(func())
 
             wrapped_func = async_wrapper
         else:
@@ -101,7 +95,14 @@ class SchedulerService:
             replace_existing=True,
         )
         self.logger.info(
-            f"Registered job '{job_id}' - schedule: {month}/{day} {hour}:{minute} (day_of_week={day_of_week}) in {self.timezone}"
+            "Registered job '%s' - schedule: %s/%s %s:%s (day_of_week=%s) in %s",
+            job_id,
+            month,
+            day,
+            hour,
+            minute,
+            day_of_week,
+            self.timezone,
         )
 
     def remove_job(self, job_id: str) -> None:
@@ -112,9 +113,9 @@ class SchedulerService:
             self.scheduler.remove_job(job_id)
             self.logger.info(f"Removed cron job '{job_id}'")
         except Exception as e:
-            self.logger.error(f"Failed to remove job '{job_id}': {e}")
+            self.logger.error("Failed to remove job '%s': %s", job_id, e, exc_info=True)
             raise
-    
+
     def list_jobs(self) -> list[dict[str, Any]]:
         """List all jobs in the scheduler"""
         if self.scheduler is None:

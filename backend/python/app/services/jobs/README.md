@@ -68,18 +68,8 @@ Add your job to `__init__.py`:
 
 ```python
 def init_jobs(scheduler_service) -> None:
-    from .driver_history_jobs import process_daily_driver_history
     from .email_jobs import your_job_function  # Import your new job
-    
-    # Existing jobs...
-    scheduler_service.add_cron_job(
-        process_daily_driver_history,
-        job_id="daily_driver_history",
-        hour=23,
-        minute=59,
-    )
-    
-    # Register your new job
+
     scheduler_service.add_cron_job(
         your_job_function,
         job_id="your_job_id",

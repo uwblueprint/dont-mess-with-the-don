@@ -21,12 +21,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize scheduler
     scheduler_service = get_scheduler_service()
     scheduler_service.start()
-    init_jobs(scheduler_service)
 
-    yield
-
-    # Shutdown scheduler
-    scheduler_service.stop()
+    try:
+        init_jobs(scheduler_service)
+        yield
+    finally:
+        # Shutdown scheduler
+        scheduler_service.stop()
 
 
 def create_app() -> FastAPI:
