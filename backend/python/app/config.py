@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         return self.app_env == "testing"
 
+    # Scheduler
+    scheduler_timezone: str = Field(default="America/Toronto")
+
 
 def get_settings() -> Settings:
     """Get settings based on environment"""
