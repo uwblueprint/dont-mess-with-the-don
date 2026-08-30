@@ -8422,11 +8422,6 @@ q@^1.1.2:
   resolved "https://registry.yarnpkg.com/q/-/q-1.5.1.tgz#7e32f75b41381291d04611f1bf14109ac00651d7"
   integrity sha512-kV/CThkXo6xyFEZUugw/+pIOywXcDbFYgSct5cT3gqlbkBE1SJdwy6UQoZvodiWF/ckQLZyDE/Bu1M6gVu5lVw==
 
-qrcode-generator@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/qrcode-generator/-/qrcode-generator-2.0.4.tgz#e8b3f30922577eba52078aa9c0d5a2a74fe1fd94"
-  integrity sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==
-
 qrcode.react@^4.2.0:
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/qrcode.react/-/qrcode.react-4.2.0.tgz#1bce8363f348197d145c0da640929a24c83cbca3"
@@ -8642,14 +8637,6 @@ react-overlays@^5.1.2:
     prop-types "^15.7.2"
     uncontrollable "^7.2.1"
     warning "^4.0.3"
-
-react-qr-code@^2.2.0:
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/react-qr-code/-/react-qr-code-2.2.0.tgz#301b5dc4d2fed503e1e313f237a7f32c1885152a"
-  integrity sha512-e5nS0UUN22K3Nf8KBRUzemfdJ6OmnN5w+kbnj1lvJaol9RyVRFeGl05bCkxSN2ZegbLxjjYjX1+mmAoX9+fAhw==
-  dependencies:
-    prop-types "^15.8.1"
-    qrcode-generator "^2.0.4"
 
 react-refresh@^0.11.0:
   version "0.11.0"
