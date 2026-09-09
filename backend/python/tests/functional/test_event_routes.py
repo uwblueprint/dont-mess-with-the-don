@@ -17,15 +17,14 @@ def make_event(**overrides):
         "location": "Toronto",
         "max_attendees": 25,
         "event_status": "published",
-        "event_type": uuid4(),
+        "event_type_id": uuid4(),
         "image": "https://example.com/headline.jpg",
-        "start_time": datetime(2026, 7, 15, 10, 0, 0),
-        "end_time": datetime(2026, 7, 15, 12, 0, 0),
+        "start_datetime": datetime(2026, 7, 15, 10, 0, 0),
+        "end_datetime": datetime(2026, 7, 15, 12, 0, 0),
         "created_at": datetime(2026, 6, 1, 9, 0, 0),
         "updated_at": None,
         "image_urls": ["https://example.com/upload.jpg"],
         "notes": ["Bring gloves"],
-        "recurrence": "weekly",
         "form_json": {"fields": []},
     }
     data.update(overrides)
@@ -96,7 +95,6 @@ async def test_get_events_returns_200(client, event_service):
             "location": None,
             "starts_after": None,
             "starts_before": None,
-            "recurrence": None,
         }
     ]
 
@@ -112,7 +110,6 @@ async def test_get_events_passes_query_filters_to_service(client, event_service)
             "location": "Toronto",
             "starts_after": "2026-07-01",
             "starts_before": "2026-08-01",
-            "recurrence": "weekly",
         },
     )
 
@@ -124,7 +121,6 @@ async def test_get_events_passes_query_filters_to_service(client, event_service)
             "location": "Toronto",
             "starts_after": datetime(2026, 7, 1, 0, 0, 0),
             "starts_before": datetime(2026, 8, 1, 23, 59, 59, 999999),
-            "recurrence": "weekly",
         }
     ]
 

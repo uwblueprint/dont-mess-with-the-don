@@ -20,7 +20,6 @@ async def get_events(
     location: str | None = None,
     starts_after: date | None = None,
     starts_before: date | None = None,
-    recurrence: str | None = None,
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
 ) -> list[EventRead]:
@@ -39,7 +38,6 @@ async def get_events(
             location=location,
             starts_after=starts_after_datetime,
             starts_before=starts_before_datetime,
-            recurrence=recurrence,
         )
         return [EventRead.model_validate(event) for event in events]
     except Exception as e:

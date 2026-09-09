@@ -23,22 +23,19 @@ class EventService:
         location: str | None = None,
         starts_after: datetime | None = None,
         starts_before: datetime | None = None,
-        recurrence: str | None = None,
     ) -> list[Event]:
         """Get all events"""
         statement = select(Event)
         if status is not None:
             statement = statement.where(Event.event_status == status)
         if event_type is not None:
-            statement = statement.where(Event.event_type == event_type)
+            statement = statement.where(Event.event_type_id == event_type)
         if location is not None:
             statement = statement.where(func.lower(Event.location) == location.lower())
         if starts_after is not None:
-            statement = statement.where(Event.start_time >= starts_after)
+            statement = statement.where(Event.start_datetime >= starts_after)
         if starts_before is not None:
-            statement = statement.where(Event.start_time <= starts_before)
-        if recurrence is not None:
-            statement = statement.where(Event.recurrence == recurrence)
+            statement = statement.where(Event.start_datetime <= starts_before)
 
         result = await session.execute(statement)
         return list(result.scalars().all())
