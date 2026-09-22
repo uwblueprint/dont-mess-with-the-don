@@ -1,0 +1,4 @@
+id,user_id,event_instance_id,response_json
+1,1,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""tshirt_size"": ""M""}"
+2,2,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""tshirt_size"": ""L""}"
+3,4,bbbbbbbb-bbbb-bbbb-bbbb-000000000004,"{""dietary_restrictions"": ""none""}"

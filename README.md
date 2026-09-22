@@ -58,6 +58,44 @@ Alembic diffs your models against the current DB schema and writes the migration
 docker exec -it don-backend alembic upgrade head
 ```
 
+### Seeding sample data (development & testing)
+
+Sample data lives as plain CSV files in `backend/python/seeds/` — one file per
+table (`event_types.csv`, `users.csv`, `events.csv`, `form_submissions.csv`,
+`registrations.csv`, `attendance.csv`). To change what gets seeded, just edit
+the CSVs; the header row of each file matches the model's field names.
+
+Run the seeder against the running dev database (via the `make` shortcuts, with
+the raw commands shown for reference):
+
+```bash
+# Seed only if the database is empty (safe to run anytime)
+make seed          # docker exec -it don-backend python -m app.seed
+
+# Wipe the seeded tables and reload them from the CSVs
+make seed-reset    # docker exec -it don-backend python -m app.seed --reset
+
+# Wipe and seed the test database instead of the dev database
+make seed-test     # docker exec -it -e APP_ENV=testing don-backend python -m app.seed --reset
+```
+
+Run `make help` to see all available shortcuts (start/stop, migrations, linting,
+tests, DB shell, etc.).
+
+To seed automatically when the backend container starts, set `SEED_DB=true` in
+the root `.env`. Startup seeding is off by default and idempotent — it skips if
+the database already has data, so it is safe to leave enabled across restarts.
+
+**CSV notes:**
+- Blank cells fall back to the model default (usually `NULL`) — leave optional
+  columns empty.
+- Rows are inserted in file order, so list parents before children in
+  `users.csv` (the `guardian_id` self-reference).
+- JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
+  contain valid JSON, e.g. `{"waiver_required": true}` or `["a", "b"]`. Wrap
+  those cells in double quotes and double any internal quotes (standard CSV
+  quoting).
+
 ### Useful Commands
 
 ```bash
