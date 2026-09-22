@@ -72,9 +72,12 @@ def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
 
 
-def init_app(_app: Any | None = None) -> None:
-    """Initialize database for the application"""
-    # Import models to register them with SQLModel
+def register_models() -> None:
+    """Import every model so it is registered on SQLModel.metadata.
+
+    Kept separate from init_app so tests can populate the metadata without
+    opening a database connection.
+    """
     from .attendance import Attendance  # noqa: F401
     from .entity import Entity  # noqa: F401
     from .event import Event  # noqa: F401
@@ -84,6 +87,11 @@ def init_app(_app: Any | None = None) -> None:
     from .registration import Registration  # noqa: F401
     from .simple_entity import SimpleEntity  # noqa: F401
     from .user import User  # noqa: F401
+
+
+def init_app(_app: Any | None = None) -> None:
+    """Initialize database for the application"""
+    register_models()
 
     init_database()
 

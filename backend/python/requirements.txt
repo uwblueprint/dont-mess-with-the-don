@@ -4,7 +4,7 @@ uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 
 # Database
-sqlmodel>=0.0.25
+sqlmodel>=0.0.25,<0.0.45
 asyncpg>=0.29.0
 psycopg2>=2.8.6
 alembic>=1.13.1
