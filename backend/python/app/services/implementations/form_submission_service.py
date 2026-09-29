@@ -95,7 +95,7 @@ class FormSubmissionService:
                 self.logger.error(f"FormSubmission with id {form_submission_id} not found")
                 return None
 
-            for key, value in form_submission_data.model_dump().items():
+            for key, value in form_submission_data.model_dump(exclude_unset=True).items():
                 setattr(form_submission, key, value)
 
             await session.commit()
