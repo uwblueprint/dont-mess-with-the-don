@@ -125,7 +125,7 @@ def _reset_sequence(session: Session, table_name: str) -> None:
 
 def _truncate(session: Session) -> None:
     """Empty every seeded table and reset identity sequences."""
-    names = ", ".join(model.__tablename__ for _, model in SEED_TABLES)  # type: ignore[attr-defined]
+    names = ", ".join(str(model.__tablename__) for _, model in SEED_TABLES)
     session.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
     session.commit()
 
@@ -161,7 +161,7 @@ def seed(reset: bool = False) -> None:
             instances = _rows_from_csv(csv_path, model)
             session.add_all(instances)
             session.commit()  # commit per table so later foreign keys resolve
-            _reset_sequence(session, model.__tablename__)  # type: ignore[attr-defined]
+            _reset_sequence(session, str(model.__tablename__))
             print(f"  {model.__tablename__}: inserted {len(instances)} rows")
 
         session.commit()
