@@ -8,6 +8,7 @@ from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.form_submission_service import FormSubmissionService
 from app.services.implementations.registration_service import RegistrationService
+from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.user_service import UserService
 
@@ -54,6 +55,12 @@ def get_user_service() -> UserService:
 
 
 @lru_cache
+def get_scheduler_service() -> SchedulerService:
+    """Get scheduler service instance"""
+    logger = get_logger()
+    return SchedulerService(logger)
+
+@lru_cache
 def get_form_submission_service() -> FormSubmissionService:
     """Get form submission service instance"""
     logger = get_logger()
@@ -79,3 +86,10 @@ def get_event_type_service() -> EventTypeService:
     """Get event type service instance"""
     logger = get_logger()
     return EventTypeService(logger)
+
+
+@lru_cache
+def get_scheduler_service() -> SchedulerService:
+    """Get scheduler service instance"""
+    logger = get_logger()
+    return SchedulerService(logger)
