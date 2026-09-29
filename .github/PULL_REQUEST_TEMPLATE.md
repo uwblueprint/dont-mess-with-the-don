@@ -1,6 +1,6 @@
-## Notion ticket link
+## Linear ticket link
 <!-- Please replace with your ticket's URL -->
-[Ticket Name](https://www.notion.so/uwblueprintexecs/Task-Board-db95cd7b93f245f78ee85e3a8a6a316d)
+[DON-XX](https://linear.app/dont-mess-with-the-don/issue/DON-XX)
 
 
 <!-- Give a quick summary of the implementation details, provide design justifications if necessary -->
