@@ -181,6 +181,17 @@ async def test_update_event_returns_200(client, event_service):
     assert update_data.location == "East York"
 
 
+async def test_update_event_ignores_recurrence(client, event_service):
+    # recurrence lives on event_series, not events
+    response = await client.patch(
+        f"{BASE}/{uuid4()}", json={"location": "East York", "recurrence": "FREQ=WEEKLY"}
+    )
+
+    assert response.status_code == 200
+    _, update_data = event_service.update_event_calls[0]
+    assert update_data.model_dump(exclude_unset=True) == {"location": "East York"}
+
+
 async def test_update_nonexistent_event_returns_404(client, event_service):
     event_service.update_event_result = None
 

@@ -63,5 +63,4 @@ class EventUpdate(SQLModel):
     end_datetime: datetime | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
-    recurrence: str | None = Field(default=None, min_length=1, max_length=255)
     form_json: dict | None = Field(default=None)

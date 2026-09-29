@@ -6,6 +6,7 @@ from . import (
     event_routes,
     event_series_routes,
     event_type_routes,
+    form_submission_routes,
     registration_routes,
     simple_entity_routes,
     user_routes,
@@ -15,6 +16,7 @@ from . import (
 def init_app(app: FastAPI) -> None:
     """Initialize all routers with the FastAPI app"""
     app.include_router(entity_routes.router)
+    app.include_router(form_submission_routes.router)
     app.include_router(event_routes.router)
     app.include_router(registration_routes.router)
     app.include_router(simple_entity_routes.router)

@@ -35,10 +35,11 @@ def app():
 async def client(app):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
-    from app.models import init_app as init_models
+    from app.models import register_models
 
-    # Force import of all models to register them in SQLModel metadata
-    init_models()
+    # register_models(), not init_app(): init_app would also spin up the Postgres
+    # engines and create tables there, which these SQLite-backed tests never use.
+    register_models()
 
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)

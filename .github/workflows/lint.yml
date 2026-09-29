@@ -51,4 +51,4 @@ jobs:
       - name: Lint Python backend
         if: steps.changes.outputs.python-backend == 'true'
         working-directory: ./backend/python
-        run: pip install ruff mypy && ruff check . && ruff format --check . && mypy .
+        run: pip install ruff==0.16.9 mypy==2.3.1 && ruff check . && ruff format --check . && mypy .
