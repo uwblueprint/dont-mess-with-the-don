@@ -1,9 +1,11 @@
 from uuid import UUID
 
+from pydantic import field_validator
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_response_json
 
 
 class FormSubmissionBase(SQLModel):
@@ -25,7 +27,10 @@ class FormSubmission(FormSubmissionBase, BaseModel, table=True):
 class FormSubmissionCreate(FormSubmissionBase):
     """FormSubmission creation request"""
 
-    pass
+    @field_validator("response_json")
+    @classmethod
+    def _validate_response_json(cls, value: dict | None) -> dict | None:
+        return validate_response_json(value)
 
 
 class FormSubmissionRead(FormSubmissionBase):
@@ -38,3 +43,8 @@ class FormSubmissionUpdate(SQLModel):
     """FormSubmission update request - all fields optional"""
 
     response_json: dict | None = Field(default=None)
+
+    @field_validator("response_json")
+    @classmethod
+    def _validate_response_json(cls, value: dict | None) -> dict | None:
+        return validate_response_json(value)

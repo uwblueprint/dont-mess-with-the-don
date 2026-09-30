@@ -127,6 +127,94 @@ docker exec don-backend mypy .
 docker exec -it don-backend pytest
 ```
 
+## Registration Forms
+
+Events can have a registration form. The form definition is stored as JSON on `event_types.form_json` (the template for an event type) and can be overridden per event on `events.form_json`. A user's answers are stored as JSON on `form_submissions.response_json`. Both formats are defined by the Pydantic schemas in `backend/python/app/models/form.py` and validated whenever an event, event type or form submission is created or updated through the API. A response can additionally be checked against a specific form definition with `validate_form_response` in `backend/python/app/utilities/form_validation.py`.
+
+`None` or `{}` means "no form" / "no response". Unknown keys are rejected everywhere.
+
+### Form JSON definition
+
+A form is an ordered list of **questions**; they render in list order. Questions are referenced by `id`, never by their label, so two questions may share a label.
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "version": 1,
+  "title": "Workshop Registration",
+  "questions": [
+    { "id": "q_name", "type": "short_answer", "label": "Name", "required": true },
+    { "id": "q_email", "type": "email", "label": "Email", "required": true },
+    { "id": "q_why", "type": "paragraph", "label": "Why are you joining?" },
+    {
+      "id": "q_dietary",
+      "type": "multiple_choice",
+      "label": "Dietary restrictions",
+      "required": true,
+      "options": [
+        { "id": "opt_none", "label": "None" },
+        { "id": "opt_veg", "label": "Vegetarian" }
+      ]
+    },
+    {
+      "id": "q_food",
+      "type": "checkboxes",
+      "label": "What food do you want during the event",
+      "options": [
+        { "id": "opt_pizza", "label": "pizza" },
+        { "id": "opt_cookies", "label": "cookies" }
+      ]
+    },
+    { "id": "q_birthday", "type": "date", "label": "Birthday" },
+    { "id": "q_arrival", "type": "time", "label": "Arrival time" }
+  ]
+}
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `formId` | yes | Non-empty string identifying the form |
+| `version` | no (default `1`) | Integer ≥ 1; bump it when the questions change |
+| `title` | yes | Display title |
+| `questions` | yes | At least one question; `id`s must be unique within the form |
+| `questions[].id` | yes | Stable key used in `answers` |
+| `questions[].type` | yes | One of the types below |
+| `questions[].label` | yes | Display text |
+| `questions[].required` | no (default `false`) | |
+| `questions[].options` | choice types only | List of `{ "id", "label" }`; option `id`s must be unique within the question |
+
+| Type | UI input | Answer format |
+| --- | --- | --- |
+| `short_answer` | single-line text | string |
+| `paragraph` | multi-line text | string |
+| `email` | email input | string matching a basic email pattern |
+| `date` | date picker | `"YYYY-MM-DD"` |
+| `time` | time picker | `"HH:MM"` (24-hour) |
+| `multiple_choice` | radio buttons | one option `id` (string) |
+| `checkboxes` | checkboxes | list of option `id`s, no duplicates |
+
+### Form JSON response
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "formVersion": 1,
+  "answers": {
+    "q_name": "Ben Ng",
+    "q_email": "ben@example.com",
+    "q_dietary": "opt_veg",
+    "q_food": ["opt_pizza", "opt_cookies"],
+    "q_birthday": "2000-11-29",
+    "q_arrival": ""
+  },
+  "responseVersion": 1
+}
+```
+
+`answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`. `responseVersion` defaults to `1`.
+
+Validated against a form definition, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format.
+
 ## Version Control Guide
 
 - Branch off `main` for all feature work. Use the format `your-name/short-description` (e.g. `pranav/readme-update`)
