@@ -87,6 +87,7 @@ def register_models() -> None:
     from .registration import Registration  # noqa: F401
     from .simple_entity import SimpleEntity  # noqa: F401
     from .user import User  # noqa: F401
+    from .waiver import Waiver  # noqa: F401
 
 
 def init_app(_app: Any | None = None) -> None:
