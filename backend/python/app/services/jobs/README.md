@@ -18,9 +18,11 @@ app/
 
 1. On application startup, `SchedulerService` is initialized and started
 2. `init_jobs()` is called, which imports all job modules and registers them with the scheduler
-3. APScheduler runs jobs in background threads according to their cron schedules
-4. Async job functions are automatically wrapped to run in their own event loops
+3. APScheduler runs jobs on the application event loop according to their cron schedules
+4. Async job functions run on that same loop
 5. On application shutdown, the scheduler is gracefully stopped
+
+Each server process starts its own scheduler, so a job runs once per process. A multi-worker deploy needs a single scheduler process.
 
 ## Creating Your Own Cron Job
 
@@ -35,30 +37,24 @@ Create a new file in this directory (e.g., `email_jobs.py`, `cleanup_jobs.py`):
 
 import logging
 from app.dependencies.services import get_logger
-from app.models import async_session_maker_instance
+from app import models
 
 
 async def your_job_function() -> None:
     """Description of what this job does"""
     logger = get_logger()
 
-    if async_session_maker_instance is None:
+    if models.async_session_maker_instance is None:
         logger.error("Database session maker not initialized")
         return
 
     try:
-        async with async_session_maker_instance() as session:
+        async with models.async_session_maker_instance() as session:
             # Your job logic here
             await session.commit()
             logger.info("Job completed successfully")
     except Exception as e:
         logger.error(f"Error in job: {e}", exc_info=True)
-        if async_session_maker_instance:
-            try:
-                async with async_session_maker_instance() as session:
-                    await session.rollback()
-            except Exception:
-                pass
         raise
 ```
 

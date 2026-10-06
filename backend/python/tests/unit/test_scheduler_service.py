@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import pytest
@@ -9,7 +10,7 @@ def _make_service() -> SchedulerService:
     return SchedulerService(logging.getLogger("test_scheduler"))
 
 
-def test_start_and_stop() -> None:
+async def test_start_and_stop() -> None:
     svc = _make_service()
     svc.start()
     try:
@@ -20,7 +21,7 @@ def test_start_and_stop() -> None:
     assert svc._is_running is False
 
 
-def test_start_twice_is_noop() -> None:
+async def test_start_twice_is_noop() -> None:
     svc = _make_service()
     svc.start()
     try:
@@ -39,7 +40,7 @@ def test_add_before_start_raises() -> None:
         svc.add_cron_job(lambda: None, job_id="too_early", hour=9, minute=0)
 
 
-def test_add_list_and_remove_job() -> None:
+async def test_add_list_and_remove_job() -> None:
     svc = _make_service()
     svc.start()
     try:
@@ -57,7 +58,7 @@ def test_add_list_and_remove_job() -> None:
         svc.stop()
 
 
-def test_replace_existing_job_keeps_single_entry() -> None:
+async def test_replace_existing_job_keeps_single_entry() -> None:
     svc = _make_service()
     svc.start()
     try:
@@ -69,14 +70,15 @@ def test_replace_existing_job_keeps_single_entry() -> None:
         svc.stop()
 
 
-def test_async_job_wrapper_runs() -> None:
+async def test_async_job_wrapper_runs() -> None:
     svc = _make_service()
     svc.start()
     try:
-        ran = {"ok": False}
+        app_loop = asyncio.get_running_loop()
+        seen: dict[str, object] = {}
 
         async def job() -> None:
-            ran["ok"] = True
+            seen["loop"] = asyncio.get_running_loop()
 
         svc.add_cron_job(job, job_id="async_heartbeat", hour=9, minute=0)
         assert svc.scheduler is not None
@@ -84,7 +86,7 @@ def test_async_job_wrapper_runs() -> None:
         assert registered is not None
 
         # Invoke the wrapped sync callable directly (no wall-clock wait)
-        registered.func()
-        assert ran["ok"] is True
+        await registered.func()
+        assert seen["loop"] is app_loop
     finally:
         svc.stop()

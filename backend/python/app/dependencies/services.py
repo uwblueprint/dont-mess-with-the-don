@@ -55,12 +55,6 @@ def get_user_service() -> UserService:
 
 
 @lru_cache
-def get_scheduler_service() -> SchedulerService:
-    """Get scheduler service instance"""
-    logger = get_logger()
-    return SchedulerService(logger)
-
-@lru_cache
 def get_form_submission_service() -> FormSubmissionService:
     """Get form submission service instance"""
     logger = get_logger()

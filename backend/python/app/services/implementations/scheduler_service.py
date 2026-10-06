@@ -1,12 +1,9 @@
-import asyncio
 import logging
 from collections.abc import Callable
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from apscheduler.schedulers.background import (
-    BackgroundScheduler,
-)
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.config import settings
@@ -17,7 +14,7 @@ class SchedulerService:
 
     def __init__(self, logger: logging.Logger):
         self.logger = logger
-        self.scheduler: BackgroundScheduler | None = None
+        self.scheduler: AsyncIOScheduler | None = None
         self._is_running = False
         # Get timezone from settings
         self.timezone = ZoneInfo(settings.scheduler_timezone)
@@ -29,7 +26,7 @@ class SchedulerService:
             return
 
         # Pass timezone to scheduler (applies to all jobs)
-        self.scheduler = BackgroundScheduler(timezone=self.timezone)
+        self.scheduler = AsyncIOScheduler(timezone=self.timezone)
         self.scheduler.start()
         self._is_running = True
         self.logger.info(f"Scheduler started with timezone: {self.timezone}")
@@ -67,16 +64,6 @@ class SchedulerService:
         if not self._is_running or self.scheduler is None:
             raise RuntimeError("Scheduler must be started before adding jobs")
 
-        # Wrap async functions to run in event loop
-        if asyncio.iscoroutinefunction(func):
-
-            def async_wrapper() -> None:
-                asyncio.run(func())
-
-            wrapped_func = async_wrapper
-        else:
-            wrapped_func = func
-
         # Explicitly pass timezone to CronTrigger to ensure the trigger uses the intended timezone,
         # even though the scheduler also has a timezone setting.
         trigger = CronTrigger(
@@ -89,7 +76,7 @@ class SchedulerService:
         )
 
         self.scheduler.add_job(
-            wrapped_func,
+            func,
             trigger=trigger,
             id=job_id,
             replace_existing=True,
