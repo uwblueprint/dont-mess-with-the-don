@@ -14,15 +14,11 @@ if project_root not in sys.path:
 from alembic import context  # noqa: E402
 from sqlmodel import SQLModel  # noqa: E402
 
-# Import all models to ensure they're registered with SQLModel
-from app.models.entity import Entity  # noqa: E402, F401
-from app.models.simple_entity import SimpleEntity  # noqa: E402, F401
-from app.models.user import User  # noqa: E402, F401
-from app.models.event import Event  # noqa: E402, F401
-from app.models.event_type import EventType  # noqa: E402, F401
-from app.models.attendance import Attendance  # noqa: E402, F401
-from app.models.registration import Registration  # noqa: E402, F401
-from app.models.form_submission import FormSubmission  # noqa: E402, F401
+from app.models import register_models  # noqa: E402
+
+# Register every model on SQLModel.metadata (the same list the app uses), so
+# autogenerate never thinks a table should be dropped
+register_models()
 
 # Alembic Config object
 config = context.config
