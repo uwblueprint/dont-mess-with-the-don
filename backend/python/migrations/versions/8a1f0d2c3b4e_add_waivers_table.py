@@ -1,7 +1,7 @@
 """add waivers table
 
 Revision ID: 8a1f0d2c3b4e
-Revises: b945a06e4bdd
+Revises: 2eceb5b619b4
 Create Date: 2026-06-29 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision = "8a1f0d2c3b4e"
-down_revision = "b945a06e4bdd"
+down_revision = "2eceb5b619b4"
 branch_labels = None
 depends_on = None
 
