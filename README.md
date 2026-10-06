@@ -215,6 +215,13 @@ A form is an ordered list of **questions**; they render in list order. Questions
 
 Validated against a form definition, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format.
 
+### Design decisions
+
+- **Questions are identified by `id`, not `key`.** The `id` is the stable key used in `answers`; it never changes when a label is edited.
+- **Options are `{ "id", "label" }`, not `{ "value", "label" }`.** Answers store option `id`s, so an option's label can be reworded without invalidating existing responses.
+- **Order is list position.** Questions and options render in the order they appear in their lists; there is no `order` field to keep in sync.
+- **No sections.** A form is a flat list of questions. `sections`, `goToSection` and a response `path` are rejected as unknown keys.
+
 ## Version Control Guide
 
 - Branch off `main` for all feature work. Use the format `your-name/short-description` (e.g. `pranav/readme-update`)

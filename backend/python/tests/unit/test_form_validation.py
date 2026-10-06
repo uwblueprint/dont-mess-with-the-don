@@ -1,8 +1,12 @@
 import copy
+import json
+import re
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
+from app.models.enum import QuestionTypeEnum
 from app.models.form import FormDefinition, validate_form_json, validate_response_json
 from app.utilities.form_validation import validate_form_response
 
@@ -293,3 +297,44 @@ def test_checkbox_answers():
     string_for_checkboxes["answers"]["q_food"] = "opt_pizza"
     with pytest.raises(ValueError, match="expects a list"):
         validate_form_response(definition, string_for_checkboxes)
+
+
+# --- README example ---
+
+
+def readme_form_examples() -> tuple[dict, dict]:
+    """Return the (definition, response) JSON examples from the README.
+
+    The README sits at the repository root, which is not mounted into the
+    backend container, so the tests using it are skipped when it is missing.
+    """
+    readme = next(
+        (
+            parent / "README.md"
+            for parent in Path(__file__).resolve().parents
+            if (parent / "README.md").is_file() and (parent / "backend").is_dir()
+        ),
+        None,
+    )
+    if readme is None:
+        # Raised rather than called so mypy narrows `readme` even where pytest
+        # is not installed (the lint job), and so sees pytest.skip as untyped.
+        raise pytest.skip.Exception("Repository README is not available")
+    section = readme.read_text(encoding="utf-8").split("## Registration Forms", 1)[1]
+    section = section.split("\n## ", 1)[0]
+    definition, response = re.findall(r"```json\n(.*?)```", section, flags=re.DOTALL)
+    return json.loads(definition), json.loads(response)
+
+
+def test_readme_example_is_valid():
+    definition_json, response_json = readme_form_examples()
+
+    definition = FormDefinition.model_validate(definition_json)
+    validate_form_response(definition, response_json)
+
+
+def test_readme_example_covers_every_question_type():
+    definition_json, _ = readme_form_examples()
+
+    definition = FormDefinition.model_validate(definition_json)
+    assert {question.type for question in definition.questions} == set(QuestionTypeEnum)
