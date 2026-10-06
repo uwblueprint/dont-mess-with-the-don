@@ -224,6 +224,14 @@ def test_missing_required_answer_rejected():
             validate_form_response(workshop_definition(), response_json)
 
 
+def test_whitespace_only_required_answer_rejected():
+    for blank in (" ", "\t\n"):
+        response_json = valid_response()
+        response_json["answers"]["q_name"] = blank
+        with pytest.raises(ValueError, match="'q_name' is required"):
+            validate_form_response(workshop_definition(), response_json)
+
+
 def test_optional_answer_may_be_empty_or_omitted():
     response_json = valid_response()
     del response_json["answers"]["q_why"]
@@ -255,16 +263,18 @@ def test_list_for_multiple_choice_rejected():
 
 def test_invalid_email_rejected():
     response_json = valid_response()
-    response_json["answers"]["q_email"] = "not-an-email"
-    with pytest.raises(ValueError, match="valid email address"):
-        validate_form_response(workshop_definition(), response_json)
+    for bad_email in ("not-an-email", "ben@example.com\n"):
+        response_json["answers"]["q_email"] = bad_email
+        with pytest.raises(ValueError, match="valid email address"):
+            validate_form_response(workshop_definition(), response_json)
 
 
 def test_invalid_time_rejected():
     response_json = valid_response()
-    response_json["answers"]["q_arrival"] = "9 o'clock"
-    with pytest.raises(ValueError, match="HH:MM"):
-        validate_form_response(workshop_definition(), response_json)
+    for bad_time in ("9 o'clock", "9:30", "25:00", "18:30\n"):
+        response_json["answers"]["q_arrival"] = bad_time
+        with pytest.raises(ValueError, match="HH:MM"):
+            validate_form_response(workshop_definition(), response_json)
 
 
 def test_valid_time_accepted():
@@ -275,9 +285,10 @@ def test_valid_time_accepted():
 
 def test_invalid_date_rejected():
     response_json = valid_response()
-    response_json["answers"]["q_birthday"] = "Nov 29th, 2025"
-    with pytest.raises(ValueError, match="YYYY-MM-DD"):
-        validate_form_response(workshop_definition(), response_json)
+    for bad_date in ("Nov 29th, 2025", "2000-1-1", "2025-02-30", "2000-11-29\n"):
+        response_json["answers"]["q_birthday"] = bad_date
+        with pytest.raises(ValueError, match="YYYY-MM-DD"):
+            validate_form_response(workshop_definition(), response_json)
 
 
 def test_checkbox_answers():

@@ -10,7 +10,11 @@ from datetime import datetime
 from app.models.enum import QuestionTypeEnum
 from app.models.form import FormDefinition, FormQuestion, FormResponse
 
-_EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_EMAIL_REGEX = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+# strptime also accepts non-zero-padded values ("2000-1-1", "9:30"), so the
+# exact shape is checked first
+_DATE_REGEX = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+_TIME_REGEX = re.compile(r"[0-9]{2}:[0-9]{2}")
 
 
 def validate_form_response(definition: FormDefinition, response_json: dict) -> FormResponse:
@@ -20,8 +24,8 @@ def validate_form_response(definition: FormDefinition, response_json: dict) -> F
     1. The response is shaped like a FormResponse (via model parsing).
     2. The response was written for this exact form (formId and formVersion match).
     3. Answers only reference questions that exist in the form.
-    4. Every required question is answered ("", [] and a missing key all
-       count as unanswered).
+    4. Every required question is answered ("", a whitespace-only string, []
+       and a missing key all count as unanswered).
     5. Each given answer matches its question's type (see _validate_answer).
     """
     response = FormResponse.model_validate(response_json)
@@ -50,7 +54,7 @@ def validate_form_response(definition: FormDefinition, response_json: dict) -> F
     # its question's type
     for question in definition.questions:
         answer = response.answers.get(question.id)
-        if answer is None or answer == "" or answer == []:
+        if answer is None or answer == [] or (isinstance(answer, str) and not answer.strip()):
             if question.required:
                 raise ValueError(f"Question '{question.id}' is required")
             continue
@@ -96,18 +100,25 @@ def _validate_answer(question: FormQuestion, answer: str | list[str]) -> str | N
         if answer not in option_ids:
             return f"Question '{question.id}' has invalid selection '{answer}'"
     elif question.type == QuestionTypeEnum.EMAIL:
-        if not _EMAIL_REGEX.match(answer):
+        if not _EMAIL_REGEX.fullmatch(answer):
             return f"Question '{question.id}' expects a valid email address"
     elif question.type == QuestionTypeEnum.DATE:
-        try:
-            datetime.strptime(answer, "%Y-%m-%d")
-        except ValueError:
+        if not _is_formatted(answer, _DATE_REGEX, "%Y-%m-%d"):
             return f"Question '{question.id}' expects a date in YYYY-MM-DD format"
     elif question.type == QuestionTypeEnum.TIME:
-        try:
-            datetime.strptime(answer, "%H:%M")
-        except ValueError:
+        if not _is_formatted(answer, _TIME_REGEX, "%H:%M"):
             return f"Question '{question.id}' expects a time in HH:MM format"
 
     # short_answer and paragraph accept any string
     return None
+
+
+def _is_formatted(answer: str, shape: re.Pattern[str], strptime_format: str) -> bool:
+    """Return whether the answer has the exact shape and is a real date/time."""
+    if not shape.fullmatch(answer):
+        return False
+    try:
+        datetime.strptime(answer, strptime_format)
+    except ValueError:
+        return False
+    return True

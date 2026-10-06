@@ -211,7 +211,7 @@ A form is an ordered list of **questions**; they render in list order. Questions
 }
 ```
 
-`answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`. `responseVersion` defaults to `1`.
+`answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`; a whitespace-only string also counts as unanswered. `responseVersion` defaults to `1`.
 
 Validated against a form definition, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format.
 
