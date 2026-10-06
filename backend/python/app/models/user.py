@@ -1,10 +1,11 @@
 from datetime import datetime
+from typing import Optional
 from urllib.parse import urlparse
 
 from pydantic import EmailStr, field_validator
 from sqlalchemy import Column, Index, String, text
 from sqlalchemy import Enum as SAEnum
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from .base import BaseModel
 from .enum import UserProfileType, UserProvider
@@ -79,6 +80,12 @@ class User(UserBase, BaseModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     password_hash: str | None = Field(default=None)
+
+    guardian: Optional["User"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={"remote_side": "User.id"},
+    )
+    children: list["User"] = Relationship(back_populates="guardian")
 
 
 class UserCreate(UserBase):

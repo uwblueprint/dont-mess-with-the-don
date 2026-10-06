@@ -1,13 +1,15 @@
 import logging
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models.event_type import EventType, EventTypeCreate, EventTypeUpdate
+from app.services.interfaces.event_type_service import IEventTypeService
 
 
-class EventTypeService:
+class EventTypeService(IEventTypeService):
     """Service for managing event types"""
 
     def __init__(self, logger: logging.Logger):
@@ -41,6 +43,12 @@ class EventTypeService:
             await session.commit()
             await session.refresh(event_type)
             return event_type
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(f"Duplicate event type name on create: {event_type_data.name}")
+            raise ValueError(
+                f"Event type with name {event_type_data.name} already exists"
+            ) from error
         except Exception as error:
             self.logger.error(f"Failed to create event type: {error!s}")
             await session.rollback()
@@ -59,13 +67,19 @@ class EventTypeService:
                 self.logger.error(f"Event type with id {event_type_id} not found")
                 return None
 
-            update_data = event_type_data.model_dump(exclude_unset=True)
+            update_data = event_type_data.model_dump(exclude_unset=True, exclude_none=True)
             for field, value in update_data.items():
                 setattr(event_type, field, value)
 
             await session.commit()
             await session.refresh(event_type)
             return event_type
+        except IntegrityError as error:
+            await session.rollback()
+            self.logger.warning(f"Duplicate event type name on update: {event_type_data.name}")
+            raise ValueError(
+                f"Event type with name {event_type_data.name} already exists"
+            ) from error
         except Exception as error:
             self.logger.error(f"Failed to update event type: {error!s}")
             await session.rollback()

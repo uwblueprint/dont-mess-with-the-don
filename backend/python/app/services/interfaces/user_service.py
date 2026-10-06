@@ -21,6 +21,10 @@ class IUserService(ABC):
         pass
 
     @abstractmethod
+    async def get_user_children(self, session: AsyncSession, user_id: int) -> list[User] | None:
+        pass
+
+    @abstractmethod
     async def create_user(self, session: AsyncSession, user_data: UserCreate) -> User:
         pass
 
