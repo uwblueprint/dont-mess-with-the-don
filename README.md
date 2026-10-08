@@ -92,9 +92,13 @@ the database already has data, so it is safe to leave enabled across restarts.
 - Rows are inserted in file order, so list parents before children in
   `users.csv` (the `guardian_id` self-reference).
 - JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
-  contain valid JSON, e.g. `{"waiver_required": true}` or `["a", "b"]`. Wrap
-  those cells in double quotes and double any internal quotes (standard CSV
-  quoting).
+  contain valid JSON, e.g. `{"formId": "frm_beach_cleanup"}` or `["a", "b"]`.
+  Wrap those cells in double quotes and double any internal quotes (standard
+  CSV quoting).
+- `form_json` and `response_json` must follow the registration form schema: a
+  response's `formId`, `formVersion` and answers have to match the form of the
+  event it points to (the event's own `form_json`, or its event type's when
+  that is blank).
 
 ### Useful Commands
 
