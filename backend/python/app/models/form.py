@@ -7,7 +7,8 @@ Event/EventType models (validate_form_json) and the FormSubmission models
 an invalid definition or response shape can never be constructed.
 
 Validating a response against a form definition is business logic and lives in
-app.utilities.form_validation. The form JSON structure is documented in the
+app.utilities.form_validation; FormSubmissionService runs it on create and
+update. The form JSON structure is documented in the
 "Registration Forms" section of the repository README.
 """
 

@@ -129,7 +129,7 @@ docker exec -it don-backend pytest
 
 ## Registration Forms
 
-Events can have a registration form. The form definition is stored as JSON on `event_types.form_json` (the template for an event type) and can be overridden per event on `events.form_json`. A user's answers are stored as JSON on `form_submissions.response_json`. Both formats are defined by the Pydantic schemas in `backend/python/app/models/form.py` and validated whenever an event, event type or form submission is created or updated through the API. A response can additionally be checked against a specific form definition with `validate_form_response` in `backend/python/app/utilities/form_validation.py`.
+Events can have a registration form. The form definition is stored as JSON on `event_types.form_json` (the template for an event type) and can be overridden per event on `events.form_json`. A user's answers are stored as JSON on `form_submissions.response_json`. Both formats are defined by the Pydantic schemas in `backend/python/app/models/form.py` and validated whenever an event, event type or form submission is created or updated through the API. When a form submission is created or its response is updated, the response is also checked against the event's form (the event's own `form_json`, falling back to its event type's) with `validate_form_response` in `backend/python/app/utilities/form_validation.py`; a response that does not match returns a 422.
 
 `None` or `{}` means "no form" / "no response". Unknown keys are rejected everywhere.
 
@@ -213,7 +213,7 @@ A form is an ordered list of **questions**; they render in list order. Questions
 
 `answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`; a whitespace-only string also counts as unanswered. `responseVersion` defaults to `1`.
 
-Validated against a form definition, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format.
+To be accepted for an event that has a form, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format. An empty response is rejected. Events without a form are not checked beyond the response's shape.
 
 ### Design decisions
 
