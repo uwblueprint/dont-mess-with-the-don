@@ -81,3 +81,56 @@ async def test_delete_event_type_returns_204(client):
 async def test_delete_nonexistent_event_type_returns_404(client):
     response = await client.delete(f"{BASE}{uuid4()}")
     assert response.status_code == 404
+
+
+VALID_FORM = {
+    "formId": "frm_poker_night",
+    "version": 1,
+    "title": "Poker Night Registration",
+    "questions": [
+        {"id": "q_name", "type": "short_answer", "label": "Name", "required": True},
+        {
+            "id": "q_experience",
+            "type": "multiple_choice",
+            "label": "Experience level",
+            "options": [
+                {"id": "opt_new", "label": "New"},
+                {"id": "opt_pro", "label": "Pro"},
+            ],
+        },
+    ],
+}
+
+
+async def test_create_event_type_with_form_json_returns_201(client):
+    payload = {**VALID_PAYLOAD, "name": "Poker Night With Form", "form_json": VALID_FORM}
+    response = await client.post(BASE, json=payload)
+    assert response.status_code == 201
+    assert response.json()["form_json"]["questions"][1]["options"][0]["id"] == "opt_new"
+
+
+async def test_create_event_type_without_form_json_defaults_to_empty(client):
+    response = await client.post(BASE, json={**VALID_PAYLOAD, "name": "Poker Night No Form"})
+    assert response.status_code == 201
+    assert response.json()["form_json"] == {}
+
+
+async def test_create_event_type_invalid_form_json_returns_422(client):
+    payload = {
+        **VALID_PAYLOAD,
+        "name": "Poker Night Bad Form",
+        "form_json": {"waiver_required": True},
+    }
+    response = await client.post(BASE, json=payload)
+    assert response.status_code == 422
+
+
+async def test_update_event_type_invalid_form_json_returns_422(client):
+    created = await client.post(BASE, json={**VALID_PAYLOAD, "name": "Poker Night Patch"})
+    assert created.status_code == 201
+
+    duplicate_ids = {**VALID_FORM, "questions": [VALID_FORM["questions"][0]] * 2}
+    response = await client.patch(
+        f"{BASE}{created.json()['id']}", json={"form_json": duplicate_ids}
+    )
+    assert response.status_code == 422

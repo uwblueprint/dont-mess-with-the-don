@@ -8,6 +8,13 @@ from app.models.event import EventCreate, EventRead, EventUpdate
 
 BASE = "/events"
 
+VALID_FORM = {
+    "formId": "frm_river_cleanup",
+    "version": 1,
+    "title": "River Cleanup Registration",
+    "questions": [{"id": "q_name", "type": "short_answer", "label": "Name", "required": True}],
+}
+
 
 def make_event(**overrides):
     data = {
@@ -25,7 +32,7 @@ def make_event(**overrides):
         "updated_at": None,
         "image_urls": ["https://example.com/upload.jpg"],
         "notes": ["Bring gloves"],
-        "form_json": {"fields": []},
+        "form_json": VALID_FORM,
     }
     data.update(overrides)
     return EventRead(**data)
@@ -148,6 +155,26 @@ async def test_create_event_returns_201(client, event_service):
     assert response.json()["name"] == "River Cleanup"
     assert len(event_service.create_event_calls) == 1
     assert event_service.create_event_calls[0].name == "Tree Planting"
+
+
+async def test_create_event_invalid_form_json_returns_422(client, event_service):
+    payload = event_request_payload(form_json={"fields": []})
+
+    response = await client.post(BASE, json=payload)
+
+    assert response.status_code == 422
+    assert event_service.create_event_calls == []
+
+
+async def test_update_event_invalid_form_json_returns_422(client, event_service):
+    invalid_form = {
+        **VALID_FORM,
+        "questions": [{"id": "q_pick", "type": "multiple_choice", "label": "Pick"}],
+    }
+
+    response = await client.patch(f"{BASE}/{uuid4()}", json={"form_json": invalid_form})
+
+    assert response.status_code == 422
 
 
 async def test_get_event_by_id_returns_200(client, event_service):

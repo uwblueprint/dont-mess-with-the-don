@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
 
 
 class EventTypeBase(SQLModel):
@@ -38,7 +39,10 @@ class EventType(EventTypeBase, BaseModel, table=True):
 class EventTypeCreate(EventTypeBase):
     """EventType creation request"""
 
-    pass
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict) -> dict:
+        return validate_form_json(value) or {}
 
 
 class EventTypeRead(EventTypeBase):
@@ -64,6 +68,11 @@ class EventTypeUpdate(SQLModel):
         if v is None:
             return v
         return validate_image_url(v)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
 
 
 def validate_image_url(v: str) -> str:

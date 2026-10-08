@@ -1,11 +1,13 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy import ARRAY, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
 
 
 class EventBase(SQLModel):
@@ -37,7 +39,10 @@ class Event(EventBase, BaseModel, table=True):
 class EventCreate(EventBase):
     """Event creation request"""
 
-    pass
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
 
 
 class EventRead(EventBase):
@@ -64,3 +69,8 @@ class EventUpdate(SQLModel):
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     form_json: dict | None = Field(default=None)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)

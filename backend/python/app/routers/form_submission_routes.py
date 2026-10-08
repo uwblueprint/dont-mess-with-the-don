@@ -74,6 +74,11 @@ async def create_form_submission(
             session, form_submission
         )
         return FormSubmissionRead.model_validate(created_form_submission)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error),
+        ) from error
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -124,6 +129,11 @@ async def update_form_submission(
         return FormSubmissionRead.model_validate(updated_form_submission)
     except HTTPException:
         raise
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(error),
+        ) from error
     except Exception as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
