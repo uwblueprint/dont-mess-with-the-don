@@ -5,6 +5,7 @@ import MainPageButton from "../../common/MainPageButton";
 import { formatEventTime } from "./EventPopupContent";
 import GoogleEventMap from "./GoogleEventMap";
 import LeafletEventMap from "./LeafletEventMap";
+import MapLibreEventMap from "./MapLibreEventMap";
 import { SAMPLE_EVENTS } from "./sampleEvents";
 import { EventMapProps } from "./types";
 
@@ -17,6 +18,7 @@ type MapProvider = {
 const PROVIDERS: MapProvider[] = [
   { key: "leaflet", label: "Leaflet + OpenStreetMap", Map: LeafletEventMap },
   { key: "google", label: "Google Maps", Map: GoogleEventMap },
+  { key: "maplibre", label: "MapLibre + OpenFreeMap", Map: MapLibreEventMap },
 ];
 
 const MAP_HEIGHT = 600;
