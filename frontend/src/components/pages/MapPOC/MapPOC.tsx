@@ -6,6 +6,7 @@ import { formatEventTime } from "./EventPopupContent";
 import GoogleEventMap from "./GoogleEventMap";
 import LeafletEventMap from "./LeafletEventMap";
 import MapLibreEventMap from "./MapLibreEventMap";
+import ProviderComparison from "./ProviderComparison";
 import { SAMPLE_EVENTS } from "./sampleEvents";
 import { EventMapProps } from "./types";
 
@@ -85,6 +86,8 @@ const MapPOC = (): React.ReactElement => {
           </div>
         </div>
       </div>
+
+      <ProviderComparison />
     </div>
   );
 };
