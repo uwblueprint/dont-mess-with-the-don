@@ -7,6 +7,7 @@ from app.services.implementations.event_series_service import EventSeriesService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.form_submission_service import FormSubmissionService
+from app.services.implementations.form_template_service import FormTemplateService
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
@@ -59,6 +60,13 @@ def get_form_submission_service() -> FormSubmissionService:
     """Get form submission service instance"""
     logger = get_logger()
     return FormSubmissionService(logger)
+
+
+@lru_cache
+def get_form_template_service() -> FormTemplateService:
+    """Get form template service instance"""
+    logger = get_logger()
+    return FormTemplateService(logger)
 
 
 @lru_cache
