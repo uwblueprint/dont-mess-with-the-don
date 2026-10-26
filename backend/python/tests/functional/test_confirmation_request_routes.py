@@ -1,5 +1,7 @@
 import uuid
 
+import pytest
+
 BASE = "/confirmation_requests/"
 USERS_BASE = "/users/"
 REGISTRATIONS_BASE = "/registrations/"
@@ -24,7 +26,6 @@ def _confirmation_payload(registration_id: int, **overrides) -> dict:
     return {
         "registration_id": registration_id,
         "email_status": "pending",
-        "timestamp": "2026-01-01T00:00:00",
         "deadline": "2026-01-07T00:00:00",
         **overrides,
     }
@@ -39,6 +40,38 @@ async def test_create_confirmation_request_returns_201(client):
     assert data["registration_id"] == reg["id"]
     assert data["email_status"] == "pending"
     assert data["confirmation_time"] is None
+
+
+async def test_create_confirmation_request_rejects_invalid_email_status(client):
+    reg = await _create_registration(client, "cr_invalid_status@example.com")
+
+    response = await client.post(
+        BASE,
+        json=_confirmation_payload(reg["id"], email_status="invalid"),
+    )
+
+    assert response.status_code == 422
+
+
+async def test_create_confirmation_request_rejects_unknown_registration(client):
+    response = await client.post(BASE, json=_confirmation_payload(999))
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Registration 999 does not exist"
+
+
+async def test_create_confirmation_request_rejects_duplicate_registration(client):
+    reg = await _create_registration(client, "cr_duplicate@example.com")
+    payload = _confirmation_payload(reg["id"])
+
+    first = await client.post(BASE, json=payload)
+    duplicate = await client.post(BASE, json=payload)
+
+    assert first.status_code == 201
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"] == (
+        f"Registration {reg['id']} already has a confirmation request"
+    )
 
 
 async def test_get_confirmation_requests_returns_200(client):
@@ -66,7 +99,7 @@ async def test_get_nonexistent_confirmation_request_returns_404(client):
     assert response.status_code == 404
 
 
-async def test_get_confirmation_requests_by_event_returns_matching_records(client):
+async def test_get_confirmation_requests_filtered_by_event_returns_matching_records(client):
     event_id = str(uuid.uuid4())
     other_event_id = str(uuid.uuid4())
 
@@ -79,7 +112,7 @@ async def test_get_confirmation_requests_by_event_returns_matching_records(clien
     await client.post(BASE, json=_confirmation_payload(reg2["id"]))
     await client.post(BASE, json=_confirmation_payload(reg_other["id"]))
 
-    response = await client.get(f"{BASE}event/{event_id}")
+    response = await client.get(BASE, params={"event_id": event_id})
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -87,10 +120,15 @@ async def test_get_confirmation_requests_by_event_returns_matching_records(clien
     assert returned_reg_ids == {reg1["id"], reg2["id"]}
 
 
-async def test_get_confirmation_requests_by_event_returns_empty_for_unknown_event(client):
-    response = await client.get(f"{BASE}event/{uuid.uuid4()}")
+async def test_get_confirmation_requests_filtered_by_event_returns_empty_for_unknown_event(client):
+    response = await client.get(BASE, params={"event_id": str(uuid.uuid4())})
     assert response.status_code == 200
     assert response.json() == []
+
+
+async def test_get_confirmation_requests_rejects_invalid_event_id(client):
+    response = await client.get(BASE, params={"event_id": "not-a-uuid"})
+    assert response.status_code == 422
 
 
 async def test_update_confirmation_request_returns_200(client):
@@ -119,6 +157,34 @@ async def test_update_confirmation_request_partial_update_leaves_other_fields_un
     data = response.json()
     assert data["email_status"] == "failed"
     assert data["deadline"] == "2026-01-07T00:00:00"
+
+
+@pytest.mark.parametrize("field", ["email_status", "deadline"])
+async def test_update_confirmation_request_rejects_null_required_fields(client, field):
+    reg = await _create_registration(client, f"cr_null_{field}@example.com")
+    create_resp = await client.post(BASE, json=_confirmation_payload(reg["id"]))
+    request_id = create_resp.json()["id"]
+
+    response = await client.patch(f"{BASE}{request_id}", json={field: None})
+    assert response.status_code == 422
+
+    unchanged = await client.get(f"{BASE}{request_id}")
+    assert unchanged.json()[field] == _confirmation_payload(reg["id"])[field]
+
+
+async def test_update_confirmation_request_keeps_creation_fields_immutable(client):
+    reg = await _create_registration(client, "cr_immutable@example.com")
+    other_reg = await _create_registration(client, "cr_immutable_other@example.com")
+    create_resp = await client.post(BASE, json=_confirmation_payload(reg["id"]))
+    request_id = create_resp.json()["id"]
+
+    response = await client.patch(
+        f"{BASE}{request_id}",
+        json={"registration_id": other_reg["id"]},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["registration_id"] == reg["id"]
 
 
 async def test_update_nonexistent_confirmation_request_returns_404(client):

@@ -10,39 +10,26 @@ from app.models.confirmation_requests import (
     ConfirmationRequestRead,
     ConfirmationRequestUpdate,
 )
-from app.services.implementations.confirmation_request_service import ConfirmationRequestService
+from app.services.implementations.confirmation_request_service import (
+    ConfirmationRequestAlreadyExistsError,
+    ConfirmationRequestService,
+    RegistrationNotFoundError,
+)
 
 router = APIRouter(prefix="/confirmation_requests", tags=["confirmation_requests"])
 
 
 @router.get("/", response_model=list[ConfirmationRequestRead])
 async def get_confirmation_requests(
+    event_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     confirmation_request_service: ConfirmationRequestService = Depends(
         get_confirmation_request_service
     ),
 ) -> list[ConfirmationRequestRead]:
     try:
-        requests = await confirmation_request_service.get_confirmation_requests(session)
-        return [ConfirmationRequestRead.model_validate(r) for r in requests]
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred",
-        ) from e
-
-
-@router.get("/event/{event_id}", response_model=list[ConfirmationRequestRead])
-async def get_confirmation_requests_by_event(
-    event_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    confirmation_request_service: ConfirmationRequestService = Depends(
-        get_confirmation_request_service
-    ),
-) -> list[ConfirmationRequestRead]:
-    try:
-        requests = await confirmation_request_service.get_confirmation_requests_by_event(
-            session, event_id
+        requests = await confirmation_request_service.get_confirmation_requests(
+            session, event_id=event_id
         )
         return [ConfirmationRequestRead.model_validate(r) for r in requests]
     except Exception as e:
@@ -88,6 +75,16 @@ async def create_confirmation_request(
     try:
         created = await confirmation_request_service.create_confirmation_request(session, data)
         return ConfirmationRequestRead.model_validate(created)
+    except RegistrationNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except ConfirmationRequestAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

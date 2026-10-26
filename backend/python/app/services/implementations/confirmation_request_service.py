@@ -1,18 +1,34 @@
 import logging
+from calendar import monthrange
 from datetime import datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import and_, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
+from app.models.attendance import Attendance
 from app.models.confirmation_requests import (
     ConfirmationRequest,
     ConfirmationRequestCreate,
     ConfirmationRequestUpdate,
 )
+from app.models.enum import RegistrationStatusEnum
+from app.models.event import Event
 from app.models.registration import Registration
 from app.services.interfaces.confirmation_request_service import IConfirmationRequestService
+
+MIN_STRIKES_FOR_CONFIRMATION = 2
+
+
+class RegistrationNotFoundError(ValueError):
+    """The registration referenced by a confirmation request does not exist."""
+
+
+class ConfirmationRequestAlreadyExistsError(ValueError):
+    """A registration already has a confirmation request."""
 
 
 class ConfirmationRequestService(IConfirmationRequestService):
@@ -21,10 +37,19 @@ class ConfirmationRequestService(IConfirmationRequestService):
     def __init__(self, logger: logging.Logger):
         self.logger = logger
 
-    async def get_confirmation_requests(self, session: AsyncSession) -> list[ConfirmationRequest]:
-        """Get all confirmation requests"""
+    async def get_confirmation_requests(
+        self, session: AsyncSession, event_id: UUID | None = None
+    ) -> list[ConfirmationRequest]:
+        """Get confirmation requests, optionally filtered by event."""
         try:
             statement = select(ConfirmationRequest)
+            if event_id is not None:
+                registration_ids = select(Registration.id).where(
+                    Registration.event_instance_id == event_id
+                )
+                statement = statement.where(
+                    col(ConfirmationRequest.registration_id).in_(registration_ids)
+                )
             result = await session.execute(statement)
             return list(result.scalars().all())
         except Exception as error:
@@ -49,35 +74,85 @@ class ConfirmationRequestService(IConfirmationRequestService):
             self.logger.error(f"Failed to get confirmation request {request_id}: {error!s}")
             raise error
 
-    async def get_confirmation_requests_by_event(
-        self, session: AsyncSession, event_id: UUID
-    ) -> list[ConfirmationRequest]:
-        """Get all confirmation requests for a given event via registration join"""
-        try:
-            registration_ids = select(Registration.id).where(
-                Registration.event_instance_id == event_id
+    async def requires_positive_confirmation(
+        self, session: AsyncSession, user_id: int, as_of: datetime | None = None
+    ) -> bool:
+        """Return whether a user has two no-shows in the previous three months."""
+        as_of = (as_of or datetime.now(ZoneInfo("America/Toronto"))).replace(tzinfo=None)
+        month = as_of.month - 3
+        year = as_of.year
+        if month <= 0:
+            month += 12
+            year -= 1
+        cutoff = as_of.replace(
+            year=year,
+            month=month,
+            day=min(as_of.day, monthrange(year, month)[1]),
+        )
+
+        statement = (
+            select(func.count(col(Registration.id)))
+            .join(Event, col(Event.id) == col(Registration.event_instance_id))
+            .outerjoin(
+                Attendance,
+                and_(
+                    col(Attendance.user_id) == col(Registration.user_id),
+                    col(Attendance.event_id) == col(Registration.event_instance_id),
+                ),
             )
-            statement = select(ConfirmationRequest).where(
-                ConfirmationRequest.registration_id.in_(registration_ids)  # type: ignore[attr-defined]
+            .where(
+                col(Registration.user_id) == user_id,
+                col(Registration.status) == RegistrationStatusEnum.ACCEPTED,
+                col(Event.end_time) >= cutoff,
+                col(Event.end_time) < as_of,
+                col(Attendance.id).is_(None),
             )
-            result = await session.execute(statement)
-            return list(result.scalars().all())
-        except Exception as error:
-            self.logger.error(
-                f"Failed to get confirmation requests for event {event_id}: {error!s}"
-            )
-            raise error
+        )
+        result = await session.execute(statement)
+        return result.scalar_one() >= MIN_STRIKES_FOR_CONFIRMATION
 
     async def create_confirmation_request(
         self, session: AsyncSession, data: ConfirmationRequestCreate
     ) -> ConfirmationRequest:
         """Create a new confirmation request"""
         try:
+            statement = select(Registration.id).where(Registration.id == data.registration_id)
+            result = await session.execute(statement)
+            if result.scalar_one_or_none() is None:
+                raise RegistrationNotFoundError(
+                    f"Registration {data.registration_id} does not exist"
+                )
+
             confirmation_request = ConfirmationRequest(**data.model_dump())
             session.add(confirmation_request)
             await session.commit()
             await session.refresh(confirmation_request)
             return confirmation_request
+        except RegistrationNotFoundError:
+            await session.rollback()
+            raise
+        except IntegrityError as error:
+            await session.rollback()
+            existing_request = await session.execute(
+                select(ConfirmationRequest.id).where(
+                    ConfirmationRequest.registration_id == data.registration_id
+                )
+            )
+            if existing_request.scalar_one_or_none() is not None:
+                raise ConfirmationRequestAlreadyExistsError(
+                    f"Registration {data.registration_id} already has a confirmation request"
+                ) from error
+
+            registration = await session.execute(
+                select(Registration.id).where(Registration.id == data.registration_id)
+            )
+            if registration.scalar_one_or_none() is None:
+                raise RegistrationNotFoundError(
+                    f"Registration {data.registration_id} does not exist"
+                ) from error
+
+            self.logger.error(f"Failed to create confirmation request: {error!s}")
+            raise
         except Exception as error:
             self.logger.error(f"Failed to create confirmation request: {error!s}")
             await session.rollback()

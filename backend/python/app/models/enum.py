@@ -30,3 +30,10 @@ class RegistrationStatusEnum(str, Enum):
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"
     WAITLIST = "waitlist"
+
+
+class ConfirmationRequestStatusEnum(str, Enum):
+    PENDING = "pending"
+    FAILED = "failed"
+    SENT = "sent"
+    CONFIRMED = "confirmed"

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,9 @@ class IConfirmationRequestService(ABC):
     """A class to handle CRUD functionality for confirmation requests"""
 
     @abstractmethod
-    async def get_confirmation_requests(self, session: AsyncSession) -> list[ConfirmationRequest]:
+    async def get_confirmation_requests(
+        self, session: AsyncSession, event_id: UUID | None = None
+    ) -> list[ConfirmationRequest]:
         pass
 
     @abstractmethod
@@ -24,9 +27,9 @@ class IConfirmationRequestService(ABC):
         pass
 
     @abstractmethod
-    async def get_confirmation_requests_by_event(
-        self, session: AsyncSession, event_id: UUID
-    ) -> list[ConfirmationRequest]:
+    async def requires_positive_confirmation(
+        self, session: AsyncSession, user_id: int, as_of: datetime | None = None
+    ) -> bool:
         pass
 
     @abstractmethod
