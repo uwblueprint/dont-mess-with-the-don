@@ -1,0 +1,9 @@
+id,email,first_name,last_name,phone_number,profile_type,provider,region,guardian_id
+1,alice@example.com,Alice,Nguyen,416-555-0101,default,google,Scarborough,
+2,bob@example.com,Bob,Singh,416-555-0102,default,google,North York,
+3,carol@example.com,Carol,Diaz,416-555-0103,default,microsoft,Etobicoke,
+4,david@example.com,David,Okafor,416-555-0104,default,google,Downtown,
+5,emma@example.com,Emma,Chen,416-555-0105,default,google,Scarborough,
+6,frank@example.com,Frank,Rossi,416-555-0106,default,microsoft,North York,
+7,,Liam,Rossi,,child,,North York,6
+8,grace@example.com,Grace,Guest,416-555-0108,guest,,Downtown,

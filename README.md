@@ -58,6 +58,48 @@ Alembic diffs your models against the current DB schema and writes the migration
 docker exec -it don-backend alembic upgrade head
 ```
 
+### Seeding sample data (development & testing)
+
+Sample data lives as plain CSV files in `backend/python/seeds/` — one file per
+table (`event_types.csv`, `users.csv`, `events.csv`, `form_submissions.csv`,
+`registrations.csv`, `attendance.csv`). To change what gets seeded, just edit
+the CSVs; the header row of each file matches the model's field names.
+
+Run the seeder against the running dev database (via the `make` shortcuts, with
+the raw commands shown for reference):
+
+```bash
+# Seed only if the database is empty (safe to run anytime)
+make seed          # docker exec -it don-backend python -m app.seed
+
+# Wipe the seeded tables and reload them from the CSVs
+make seed-reset    # docker exec -it don-backend python -m app.seed --reset
+
+# Wipe and seed the test database instead of the dev database
+make seed-test     # docker exec -it -e APP_ENV=testing don-backend python -m app.seed --reset
+```
+
+Run `make help` to see all available shortcuts (start/stop, migrations, linting,
+tests, DB shell, etc.).
+
+To seed automatically when the backend container starts, set `SEED_DB=true` in
+the root `.env`. Startup seeding is off by default and idempotent — it skips if
+the database already has data, so it is safe to leave enabled across restarts.
+
+**CSV notes:**
+- Blank cells fall back to the model default (usually `NULL`) — leave optional
+  columns empty.
+- Rows are inserted in file order, so list parents before children in
+  `users.csv` (the `guardian_id` self-reference).
+- JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
+  contain valid JSON, e.g. `{"formId": "frm_beach_cleanup"}` or `["a", "b"]`.
+  Wrap those cells in double quotes and double any internal quotes (standard
+  CSV quoting).
+- `form_json` and `response_json` must follow the registration form schema: a
+  response's `formId`, `formVersion` and answers have to match the form of the
+  event it points to (the event's own `form_json`, or its event type's when
+  that is blank).
+
 ### Useful Commands
 
 ```bash
@@ -88,6 +130,101 @@ docker exec don-backend mypy .
 # Run Python tests
 docker exec -it don-backend pytest
 ```
+
+## Registration Forms
+
+Events can have a registration form. The form definition is stored as JSON on `event_types.form_json` (the template for an event type) and can be overridden per event on `events.form_json`. A user's answers are stored as JSON on `form_submissions.response_json`. Both formats are defined by the Pydantic schemas in `backend/python/app/models/form.py` and validated whenever an event, event type or form submission is created or updated through the API. When a form submission is created or its response is updated, the response is also checked against the event's form (the event's own `form_json`, falling back to its event type's) with `validate_form_response` in `backend/python/app/utilities/form_validation.py`; a response that does not match returns a 422.
+
+`None` or `{}` means "no form" / "no response". Unknown keys are rejected everywhere.
+
+### Form JSON definition
+
+A form is an ordered list of **questions**; they render in list order. Questions are referenced by `id`, never by their label, so two questions may share a label.
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "version": 1,
+  "title": "Workshop Registration",
+  "questions": [
+    { "id": "q_name", "type": "short_answer", "label": "Name", "required": true },
+    { "id": "q_email", "type": "email", "label": "Email", "required": true },
+    { "id": "q_why", "type": "paragraph", "label": "Why are you joining?" },
+    {
+      "id": "q_dietary",
+      "type": "multiple_choice",
+      "label": "Dietary restrictions",
+      "required": true,
+      "options": [
+        { "id": "opt_none", "label": "None" },
+        { "id": "opt_veg", "label": "Vegetarian" }
+      ]
+    },
+    {
+      "id": "q_food",
+      "type": "checkboxes",
+      "label": "What food do you want during the event",
+      "options": [
+        { "id": "opt_pizza", "label": "pizza" },
+        { "id": "opt_cookies", "label": "cookies" }
+      ]
+    },
+    { "id": "q_birthday", "type": "date", "label": "Birthday" },
+    { "id": "q_arrival", "type": "time", "label": "Arrival time" }
+  ]
+}
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `formId` | yes | Non-empty string identifying the form |
+| `version` | no (default `1`) | Integer ≥ 1; bump it when the questions change |
+| `title` | yes | Display title |
+| `questions` | yes | At least one question; `id`s must be unique within the form |
+| `questions[].id` | yes | Stable key used in `answers` |
+| `questions[].type` | yes | One of the types below |
+| `questions[].label` | yes | Display text |
+| `questions[].required` | no (default `false`) | |
+| `questions[].options` | choice types only | List of `{ "id", "label" }`; option `id`s must be unique within the question |
+
+| Type | UI input | Answer format |
+| --- | --- | --- |
+| `short_answer` | single-line text | string |
+| `paragraph` | multi-line text | string |
+| `email` | email input | string matching a basic email pattern |
+| `date` | date picker | `"YYYY-MM-DD"` |
+| `time` | time picker | `"HH:MM"` (24-hour) |
+| `multiple_choice` | radio buttons | one option `id` (string) |
+| `checkboxes` | checkboxes | list of option `id`s, no duplicates |
+
+### Form JSON response
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "formVersion": 1,
+  "answers": {
+    "q_name": "Ben Ng",
+    "q_email": "ben@example.com",
+    "q_dietary": "opt_veg",
+    "q_food": ["opt_pizza", "opt_cookies"],
+    "q_birthday": "2000-11-29",
+    "q_arrival": ""
+  },
+  "responseVersion": 1
+}
+```
+
+`answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`; a whitespace-only string also counts as unanswered. `responseVersion` defaults to `1`.
+
+To be accepted for an event that has a form, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format. An empty response is rejected. Events without a form are not checked beyond the response's shape.
+
+### Design decisions
+
+- **Questions are identified by `id`, not `key`.** The `id` is the stable key used in `answers`; it never changes when a label is edited.
+- **Options are `{ "id", "label" }`, not `{ "value", "label" }`.** Answers store option `id`s, so an option's label can be reworded without invalidating existing responses.
+- **Order is list position.** Questions and options render in the order they appear in their lists; there is no `order` field to keep in sync.
+- **No sections.** A form is a flat list of questions. `sections`, `goToSection` and a response `path` are rejected as unknown keys.
 
 ## Version Control Guide
 

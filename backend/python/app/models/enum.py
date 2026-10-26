@@ -37,3 +37,20 @@ class ConfirmationRequestStatusEnum(str, Enum):
     FAILED = "failed"
     SENT = "sent"
     CONFIRMED = "confirmed"
+
+
+class EventRegistrationTypeEnum(str, Enum):
+    LOTTERY = "lottery"
+    AUTO_APPROVE = "auto_approve"
+    MANUAL_APPROVE = "manual_approve"
+    DROPIN = "dropin"
+
+
+class QuestionTypeEnum(str, Enum):
+    SHORT_ANSWER = "short_answer"
+    PARAGRAPH = "paragraph"
+    MULTIPLE_CHOICE = "multiple_choice"
+    CHECKBOXES = "checkboxes"
+    DATE = "date"
+    TIME = "time"
+    EMAIL = "email"

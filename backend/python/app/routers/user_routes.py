@@ -45,6 +45,27 @@ async def get_user(
     return UserRead.model_validate(user)
 
 
+@router.get("/{user_id}/children", response_model=list[UserRead])
+async def get_user_children(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+    user_service: UserService = Depends(get_user_service),
+) -> list[UserRead]:
+    try:
+        children = await user_service.get_user_children(session, user_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
+        ) from e
+    if children is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with id {user_id} not found",
+        )
+    return [UserRead.model_validate(child) for child in children]
+
+
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: UserCreate,

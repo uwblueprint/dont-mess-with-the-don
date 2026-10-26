@@ -1,11 +1,13 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy import ARRAY, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
 
 
 class EventBase(SQLModel):
@@ -16,13 +18,13 @@ class EventBase(SQLModel):
     location: str = Field(min_length=1, max_length=255)
     max_attendees: int = Field(ge=0)
     event_status: str = Field(min_length=1, max_length=255)
-    event_type: UUID | None = Field(default=None, foreign_key="event_types.id")
+    event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     image: str = Field(min_length=1)
-    start_time: datetime
-    end_time: datetime
+    start_datetime: datetime
+    end_datetime: datetime
     image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
-    recurrence: str = Field(min_length=1, max_length=255)
+    event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 
@@ -37,7 +39,10 @@ class Event(EventBase, BaseModel, table=True):
 class EventCreate(EventBase):
     """Event creation request"""
 
-    pass
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
 
 
 class EventRead(EventBase):
@@ -55,11 +60,17 @@ class EventUpdate(SQLModel):
     description: str | None = Field(default=None, min_length=1)
     location: str | None = Field(default=None, min_length=1, max_length=255)
     max_attendees: int | None = Field(default=None, ge=0)
-    event_type: UUID | None = Field(default=None)
+    event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
+    event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
     image: str | None = Field(default=None, min_length=1)
-    start_time: datetime | None = Field(default=None)
-    end_time: datetime | None = Field(default=None)
+    start_datetime: datetime | None = Field(default=None)
+    end_datetime: datetime | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     form_json: dict | None = Field(default=None)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)

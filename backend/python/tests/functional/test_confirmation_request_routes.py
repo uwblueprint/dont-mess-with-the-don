@@ -1,6 +1,10 @@
 import uuid
+from datetime import datetime
 
 import pytest
+
+from app.dependencies.services import get_confirmation_request_service
+from app.models import get_session
 
 BASE = "/confirmation_requests/"
 USERS_BASE = "/users/"
@@ -129,6 +133,57 @@ async def test_get_confirmation_requests_filtered_by_event_returns_empty_for_unk
 async def test_get_confirmation_requests_rejects_invalid_event_id(client):
     response = await client.get(BASE, params={"event_id": "not-a-uuid"})
     assert response.status_code == 422
+
+
+async def test_strikes_expire_and_attendance_removes_a_no_show(client, app):
+    user_response = await client.post(USERS_BASE, json={"email": "cr_strikes@example.com"})
+    assert user_response.status_code == 201
+    user_id = user_response.json()["id"]
+
+    async def register_for_event(end_datetime: datetime) -> str:
+        event_response = await client.post(
+            "/events",
+            json={
+                "name": "Confirmation test event",
+                "description": "Test event for strike eligibility",
+                "location": "Toronto",
+                "max_attendees": 10,
+                "event_status": "published",
+                "image": "https://example.com/event.jpg",
+                "start_datetime": end_datetime.replace(hour=10).isoformat(),
+                "end_datetime": end_datetime.isoformat(),
+            },
+        )
+        assert event_response.status_code == 201
+        event_id = event_response.json()["id"]
+        registration_response = await client.post(
+            REGISTRATIONS_BASE,
+            json={"user_id": user_id, "event_instance_id": event_id, "status": "accepted"},
+        )
+        assert registration_response.status_code == 201
+        return event_id
+
+    await register_for_event(datetime(2026, 6, 1, 12))
+    attended_event_id = await register_for_event(datetime(2026, 8, 1, 12))
+
+    sessions = app.dependency_overrides[get_session]()
+    session = await anext(sessions)
+    service = get_confirmation_request_service()
+    as_of = datetime(2026, 10, 26, 12)
+    try:
+        assert not await service.requires_positive_confirmation(session, user_id, as_of)
+
+        await register_for_event(datetime(2026, 9, 1, 12))
+        assert await service.requires_positive_confirmation(session, user_id, as_of)
+
+        attendance_response = await client.post(
+            "/attendance/",
+            json={"user_id": user_id, "event_instance_id": attended_event_id},
+        )
+        assert attendance_response.status_code == 201
+        assert not await service.requires_positive_confirmation(session, user_id, as_of)
+    finally:
+        await sessions.aclose()
 
 
 async def test_update_confirmation_request_returns_200(client):

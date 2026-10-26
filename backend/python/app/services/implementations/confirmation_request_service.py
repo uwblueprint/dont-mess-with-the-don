@@ -97,14 +97,14 @@ class ConfirmationRequestService(IConfirmationRequestService):
                 Attendance,
                 and_(
                     col(Attendance.user_id) == col(Registration.user_id),
-                    col(Attendance.event_id) == col(Registration.event_instance_id),
+                    col(Attendance.event_instance_id) == col(Registration.event_instance_id),
                 ),
             )
             .where(
                 col(Registration.user_id) == user_id,
                 col(Registration.status) == RegistrationStatusEnum.ACCEPTED,
-                col(Event.end_time) >= cutoff,
-                col(Event.end_time) < as_of,
+                col(Event.end_datetime) >= cutoff,
+                col(Event.end_datetime) < as_of,
                 col(Attendance.id).is_(None),
             )
         )
