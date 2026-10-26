@@ -1,6 +1,6 @@
 import logging
 from calendar import monthrange
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -15,12 +15,13 @@ from app.models.confirmation_requests import (
     ConfirmationRequestCreate,
     ConfirmationRequestUpdate,
 )
-from app.models.enum import RegistrationStatusEnum
+from app.models.enum import ConfirmationRequestStatusEnum, RegistrationStatusEnum
 from app.models.event import Event
 from app.models.registration import Registration
 from app.services.interfaces.confirmation_request_service import IConfirmationRequestService
 
 MIN_STRIKES_FOR_CONFIRMATION = 2
+CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT = 72
 
 
 class RegistrationNotFoundError(ValueError):
@@ -110,6 +111,28 @@ class ConfirmationRequestService(IConfirmationRequestService):
         )
         result = await session.execute(statement)
         return result.scalar_one() >= MIN_STRIKES_FOR_CONFIRMATION
+
+    async def add_for_registration_if_required(
+        self, session: AsyncSession, registration: Registration
+    ) -> None:
+        """Stage a pending request for an eligible signup in its registration transaction."""
+        if not await self.requires_positive_confirmation(session, registration.user_id):
+            return
+
+        event = await session.get(Event, registration.event_instance_id)
+        if event is None:
+            raise ValueError(f"Event {registration.event_instance_id} does not exist")
+        if registration.id is None:
+            raise ValueError("Registration must be flushed before creating a confirmation request")
+
+        session.add(
+            ConfirmationRequest(
+                registration_id=registration.id,
+                email_status=ConfirmationRequestStatusEnum.PENDING,
+                deadline=event.start_datetime
+                - timedelta(hours=CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT),
+            )
+        )
 
     async def create_confirmation_request(
         self, session: AsyncSession, data: ConfirmationRequestCreate

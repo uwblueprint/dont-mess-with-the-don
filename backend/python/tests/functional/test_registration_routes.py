@@ -1,6 +1,72 @@
 import uuid
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 BASE = "/registrations/"
+
+
+async def test_eligible_signup_creates_pending_confirmation_request(client):
+    user_response = await client.post("/users/", json={"email": "two_strikes@example.com"})
+    user_id = user_response.json()["id"]
+    now = datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None)
+
+    async def create_event(start: datetime) -> str:
+        response = await client.post(
+            "/events",
+            json={
+                "name": "Registration confirmation test",
+                "description": "Tests automatic confirmation requests",
+                "location": "Toronto",
+                "max_attendees": 10,
+                "event_status": "published",
+                "image": "https://example.com/event.jpg",
+                "start_datetime": start.isoformat(),
+                "end_datetime": (start + timedelta(hours=2)).isoformat(),
+            },
+        )
+        assert response.status_code == 201
+        return response.json()["id"]
+
+    for days_ago in (30, 15):
+        event_id = await create_event(now - timedelta(days=days_ago))
+        response = await client.post(
+            BASE,
+            json={"user_id": user_id, "event_instance_id": event_id, "status": "accepted"},
+        )
+        assert response.status_code == 201
+
+    event_start = now + timedelta(days=14)
+    upcoming_event_id = await create_event(event_start)
+    signup = await client.post(
+        BASE,
+        json={
+            "user_id": user_id,
+            "event_instance_id": upcoming_event_id,
+            "status": "waitlist",
+        },
+    )
+    assert signup.status_code == 201
+
+    requests = await client.get("/confirmation_requests/", params={"event_id": upcoming_event_id})
+    assert requests.status_code == 200
+    assert len(requests.json()) == 1
+    request = requests.json()[0]
+    assert request["registration_id"] == signup.json()["id"]
+    assert request["email_status"] == "pending"
+    assert datetime.fromisoformat(request["deadline"]) == event_start - timedelta(hours=72)
+
+    other_user = await client.post("/users/", json={"email": "no_strikes@example.com"})
+    other_signup = await client.post(
+        BASE,
+        json={
+            "user_id": other_user.json()["id"],
+            "event_instance_id": upcoming_event_id,
+            "status": "waitlist",
+        },
+    )
+    assert other_signup.status_code == 201
+    requests = await client.get("/confirmation_requests/", params={"event_id": upcoming_event_id})
+    assert len(requests.json()) == 1
 
 
 async def test_create_registration_returns_201(client):

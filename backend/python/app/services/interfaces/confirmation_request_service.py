@@ -9,6 +9,7 @@ from app.models.confirmation_requests import (
     ConfirmationRequestCreate,
     ConfirmationRequestUpdate,
 )
+from app.models.registration import Registration
 
 
 class IConfirmationRequestService(ABC):
@@ -30,6 +31,12 @@ class IConfirmationRequestService(ABC):
     async def requires_positive_confirmation(
         self, session: AsyncSession, user_id: int, as_of: datetime | None = None
     ) -> bool:
+        pass
+
+    @abstractmethod
+    async def add_for_registration_if_required(
+        self, session: AsyncSession, registration: Registration
+    ) -> None:
         pass
 
     @abstractmethod
