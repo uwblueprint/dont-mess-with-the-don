@@ -84,6 +84,7 @@ def register_models() -> None:
     from .event_series import EventSeries  # noqa: F401
     from .event_type import EventType  # noqa: F401
     from .form_submission import FormSubmission  # noqa: F401
+    from .form_template import FormTemplate  # noqa: F401
     from .registration import Registration  # noqa: F401
     from .simple_entity import SimpleEntity  # noqa: F401
     from .user import User  # noqa: F401
