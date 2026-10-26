@@ -79,6 +79,7 @@ def register_models() -> None:
     opening a database connection.
     """
     from .attendance import Attendance  # noqa: F401
+    from .confirmation_requests import ConfirmationRequest  # noqa: F401
     from .entity import Entity  # noqa: F401
     from .event import Event  # noqa: F401
     from .event_series import EventSeries  # noqa: F401
