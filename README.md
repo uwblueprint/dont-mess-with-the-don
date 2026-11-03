@@ -31,6 +31,15 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 
    **Ask PL** To share `.env` (root) and `frontend/.env` and place them in the repo root and `frontend/` respectively.
 
+   Optional `frontend/.env` variables for the map POC (`/mapPOC`):
+
+   | Variable | Purpose |
+   | --- | --- |
+   | `REACT_APP_GOOGLE_MAPS_API_KEY` | Google Maps JavaScript API key. Without it, the Google tab renders in watermarked development mode. |
+   | `REACT_APP_GOOGLE_MAPS_MAP_ID` | Google Cloud map ID for advanced markers and cloud styling. Defaults to Google's `DEMO_MAP_ID`. |
+
+   The Leaflet and MapLibre tabs need no keys. Restart the frontend after editing `.env`.
+
 3. Start all services:
 ```bash
 docker-compose up --build

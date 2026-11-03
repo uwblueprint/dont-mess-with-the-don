@@ -19,6 +19,7 @@ import SampleContextDispatcherContext from "./contexts/SampleContextDispatcherCo
 import EditTeamInfoPage from "./components/pages/EditTeamPage";
 import HooksDemo from "./components/pages/HooksDemo";
 import QRCodePOC from "./components/pages/QRCodePOC";
+import MapPOC from "./components/pages/MapPOC";
 
 const App = (): React.ReactElement => {
   // Some sort of global state. Context API replaces redux.
@@ -74,6 +75,7 @@ const App = (): React.ReactElement => {
             />
             <Route exact path={Routes.HOOKS_PAGE} component={HooksDemo} />
             <Route exact path={Routes.QR_CODE_POC_PAGE} component={QRCodePOC} />
+            <Route exact path={Routes.MAP_POC_PAGE} component={MapPOC} />
             <Route exact path="*" component={NotFound} />
           </Switch>
         </Router>
