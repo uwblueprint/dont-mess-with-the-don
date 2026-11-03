@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.services import get_event_service
+from app.dependencies.services import get_event_service, get_form_submission_service
 from app.models import get_session
 from app.models.event import EventCreate, EventRead, EventUpdate
+from app.models.form_submission import FormSubmissionRead
 from app.services.implementations.event_service import EventService
+from app.services.implementations.form_submission_service import FormSubmissionService
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -76,6 +78,27 @@ async def get_event(
             detail=f"Event with id {event_id} not found",
         )
     return EventRead.model_validate(event)
+
+
+@router.get("/{event_id}/feedback", response_model=list[FormSubmissionRead])
+async def get_event_feedback(
+    event_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
+) -> list[FormSubmissionRead]:
+    """Get all feedback submitted for an event"""
+    try:
+        feedback = await form_submission_service.get_event_feedback(session, event_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+    if feedback is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found",
+        )
+    return [FormSubmissionRead.model_validate(submission) for submission in feedback]
 
 
 @router.patch("/{event_id}", response_model=EventRead)

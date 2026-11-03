@@ -226,6 +226,14 @@ To be accepted for an event that has a form, a response must use the form's `for
 - **Order is list position.** Questions and options render in the order they appear in their lists; there is no `order` field to keep in sync.
 - **No sections.** A form is a flat list of questions. `sections`, `goToSection` and a response `path` are rejected as unknown keys.
 
+### Feedback forms
+
+Reusable forms that aren't tied to one event, such as a post-event feedback form, live in the `forms` table (`id` + `form_json`, same format as above) and are managed through `/forms`.
+
+- A submission to one of these forms sets `form_id` on the form submission. Its response is checked against that form instead of the event's registration form. Submissions without a `form_id` are registration responses, as before.
+- `GET /events/{event_id}/feedback` returns every submission for that event that has a `form_id`. `GET /form_submissions/?form_id=...` filters by form.
+- A form can't be deleted while submissions still use it (409).
+
 ## Version Control Guide
 
 - Branch off `main` for all feature work. Use the format `your-name/short-description` (e.g. `pranav/readme-update`)

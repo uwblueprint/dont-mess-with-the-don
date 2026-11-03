@@ -19,13 +19,14 @@ router = APIRouter(prefix="/form_submissions", tags=["form_submissions"])
 async def get_form_submissions(
     user_id: int | None = None,
     event_instance_id: UUID | None = None,
+    form_id: UUID | None = None,
     session: AsyncSession = Depends(get_session),
     form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
 ) -> list[FormSubmissionRead]:
     """Retrieve all form submissions"""
     try:
         form_submissions = await form_submission_service.get_form_submissions(
-            session, user_id=user_id, event_instance_id=event_instance_id
+            session, user_id=user_id, event_instance_id=event_instance_id, form_id=form_id
         )
 
         return [FormSubmissionRead.model_validate(submission) for submission in form_submissions]

@@ -13,6 +13,9 @@ class FormSubmissionBase(SQLModel):
 
     user_id: int = Field(foreign_key="users.id")
     event_instance_id: UUID = Field(foreign_key="events.id")
+    # Set for submissions to a reusable form (e.g. feedback); None means the
+    # submission answers the event's own registration form
+    form_id: UUID | None = Field(default=None, foreign_key="forms.id")
     response_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 

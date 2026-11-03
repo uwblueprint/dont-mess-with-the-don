@@ -12,6 +12,7 @@ from app.models.form_submission import (
     FormSubmissionCreate,
     FormSubmissionUpdate,
 )
+from app.models.form_template import FormTemplate
 from app.utilities.form_validation import validate_form_response
 
 
@@ -26,6 +27,7 @@ class FormSubmissionService:
         session: AsyncSession,
         user_id: int | None = None,
         event_instance_id: UUID | None = None,
+        form_id: UUID | None = None,
     ) -> list[FormSubmission]:
         """Get all form submissions"""
         statement = select(FormSubmission)
@@ -34,6 +36,8 @@ class FormSubmissionService:
             statement = statement.where(FormSubmission.user_id == user_id)
         if event_instance_id is not None:
             statement = statement.where(FormSubmission.event_instance_id == event_instance_id)
+        if form_id is not None:
+            statement = statement.where(FormSubmission.form_id == form_id)
 
         result = await session.execute(statement)
         return list(result.scalars().all())
@@ -51,6 +55,36 @@ class FormSubmissionService:
             return None
 
         return form_submission
+
+    async def get_event_feedback(
+        self, session: AsyncSession, event_id: UUID
+    ) -> list[FormSubmission] | None:
+        """Get an event's feedback: its submissions to a reusable form.
+
+        Returns None if the event does not exist.
+        """
+        if await session.get(Event, event_id) is None:
+            self.logger.error(f"Event with id {event_id} not found")
+            return None
+
+        statement = select(FormSubmission).where(
+            FormSubmission.event_instance_id == event_id,
+            FormSubmission.form_id.is_not(None),  # type: ignore[union-attr]
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+
+    async def _get_form_template_definition(
+        self, session: AsyncSession, form_id: UUID
+    ) -> FormDefinition:
+        """Get a form template's definition; raises ValueError if it does not exist"""
+        form_template = await session.get(FormTemplate, form_id)
+        if form_template is None:
+            raise ValueError(f"Form {form_id} not found")
+        try:
+            return FormDefinition.model_validate(form_template.form_json)
+        except ValueError as error:
+            raise RuntimeError(f"Form {form_id} has an invalid form definition") from error
 
     async def _get_form_definition(
         self, session: AsyncSession, event_id: UUID
@@ -78,17 +112,29 @@ class FormSubmissionService:
             raise RuntimeError(f"Event {event_id} has an invalid form definition") from error
 
     async def _validate_response(
-        self, session: AsyncSession, event_id: UUID, response_json: dict | None
+        self,
+        session: AsyncSession,
+        event_id: UUID,
+        form_id: UUID | None,
+        response_json: dict | None,
     ) -> None:
-        """Check a response against the event's form; raises ValueError on mismatch.
+        """Check a response against the form it answers; raises ValueError on mismatch.
 
-        Nothing is checked when the event does not exist or has no form.
+        With a form_id the response answers that form template (e.g. feedback);
+        otherwise it answers the event's own form. Nothing is checked when the
+        event does not exist or has no form.
         """
-        definition = await self._get_form_definition(session, event_id)
-        if definition is None:
-            return
-        if not response_json:
-            raise ValueError("A response is required for this event's form")
+        if form_id is not None:
+            definition = await self._get_form_template_definition(session, form_id)
+            if not response_json:
+                raise ValueError("A response is required for this form")
+        else:
+            event_definition = await self._get_form_definition(session, event_id)
+            if event_definition is None:
+                return
+            definition = event_definition
+            if not response_json:
+                raise ValueError("A response is required for this event's form")
         validate_form_response(definition, response_json)
 
     async def create_form_submission(
@@ -97,7 +143,10 @@ class FormSubmissionService:
         """Create new form submission; raises ValueError if the response does not
         match the event's form"""
         await self._validate_response(
-            session, form_submission_data.event_instance_id, form_submission_data.response_json
+            session,
+            form_submission_data.event_instance_id,
+            form_submission_data.form_id,
+            form_submission_data.response_json,
         )
         try:
             form_submission = FormSubmission(**form_submission_data.model_dump())
@@ -144,7 +193,10 @@ class FormSubmissionService:
         updates = form_submission_data.model_dump(exclude_unset=True)
         if "response_json" in updates:
             await self._validate_response(
-                session, form_submission.event_instance_id, updates["response_json"]
+                session,
+                form_submission.event_instance_id,
+                form_submission.form_id,
+                updates["response_json"],
             )
         try:
             for key, value in updates.items():
