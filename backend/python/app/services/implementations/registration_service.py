@@ -8,6 +8,7 @@ from sqlmodel import select
 
 from app.models.enum import RegistrationStatusEnum
 from app.models.registration import Registration, RegistrationCreate, RegistrationUpdate
+from app.services.implementations.confirmation_request_service import ConfirmationRequestService
 from app.services.interfaces.registration_service import IRegistrationService
 
 
@@ -16,6 +17,7 @@ class RegistrationService(IRegistrationService):
 
     def __init__(self, logger: logging.Logger):
         self.logger = logger
+        self.confirmation_request_service = ConfirmationRequestService(logger)
 
     async def get_registrations(
         self,
@@ -57,6 +59,10 @@ class RegistrationService(IRegistrationService):
         try:
             registration = Registration(**registration_data.model_dump())
             session.add(registration)
+            await session.flush()
+            await self.confirmation_request_service.add_for_registration_if_required(
+                session, registration
+            )
             await session.commit()
             await session.refresh(registration)
             return registration
