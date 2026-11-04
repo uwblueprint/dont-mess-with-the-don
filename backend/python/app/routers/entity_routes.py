@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_entity_service
 from app.models import get_session
 from app.models.entity import EntityCreate, EntityRead, EntityUpdate
 from app.services.implementations.entity_service import EntityService
 
-router = APIRouter(prefix="/entities", tags=["entities"])
+router = APIRouter(prefix="/entities", tags=["entities"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/", response_model=list[EntityRead])

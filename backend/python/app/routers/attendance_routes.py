@@ -3,12 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_attendance_service
 from app.models import get_session
 from app.models.attendance import AttendanceCreate, AttendanceRead
 from app.services.implementations.attendance_service import AttendanceService
 
-router = APIRouter(prefix="/attendance", tags=["attendance"])
+router = APIRouter(prefix="/attendance", tags=["attendance"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/{attendance_id}", response_model=AttendanceRead)

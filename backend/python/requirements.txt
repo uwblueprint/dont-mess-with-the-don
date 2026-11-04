@@ -13,6 +13,9 @@ alembic>=1.13.1
 pydantic-settings>=2.0.0
 email-validator>=2.1.0
 
+# Auth (checks Firebase ID tokens)
+firebase-admin>=7.7.0,<8
+
 # Development & Testing
 pytest>=6.2.4
 pytest-mock>=3.6.1

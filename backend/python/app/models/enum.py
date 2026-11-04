@@ -12,6 +12,11 @@ class UserProvider(str, Enum):
     GOOGLE = "google"
 
 
+class UserRole(str, Enum):
+    ATTENDEE = "attendee"
+    ADMIN = "admin"
+
+
 class EntityEnum(str, Enum):
     A = "A"
     B = "B"

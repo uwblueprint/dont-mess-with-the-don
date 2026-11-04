@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_event_type_service
 from app.models import get_session
 from app.models.event_type import EventTypeCreate, EventTypeRead, EventTypeUpdate
@@ -37,7 +38,12 @@ async def get_event_type(
     return EventTypeRead.model_validate(event_type)
 
 
-@router.post("/", response_model=EventTypeRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=EventTypeRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 async def create_event_type(
     event_type_data: EventTypeCreate,
     session: AsyncSession = Depends(get_session),
@@ -56,7 +62,9 @@ async def create_event_type(
         ) from e
 
 
-@router.patch("/{event_type_id}", response_model=EventTypeRead)
+@router.patch(
+    "/{event_type_id}", response_model=EventTypeRead, dependencies=[Depends(require_admin)]
+)
 async def update_event_type(
     event_type_id: UUID,
     event_type_data: EventTypeUpdate,
@@ -84,7 +92,11 @@ async def update_event_type(
     return EventTypeRead.model_validate(updated_event_type)
 
 
-@router.delete("/{event_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_type_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_event_type(
     event_type_id: UUID,
     session: AsyncSession = Depends(get_session),
