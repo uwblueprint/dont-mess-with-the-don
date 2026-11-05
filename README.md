@@ -22,7 +22,7 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Node.js 18+ (install directly from [nodejs.org](https://nodejs.org/) or via [nvm](https://github.com/nvm-sh/nvm))
+- Node.js 24+ (install directly from [nodejs.org](https://nodejs.org/) or via [nvm](https://github.com/nvm-sh/nvm))
 
 ### Initial Setup
 
