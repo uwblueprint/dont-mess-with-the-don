@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_event_service, get_form_submission_service
 from app.models import get_session
 from app.models.event import EventCreate, EventRead, EventUpdate
@@ -48,7 +49,12 @@ async def get_events(
         ) from e
 
 
-@router.post("", response_model=EventRead, status_code=http_status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=EventRead,
+    status_code=http_status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 async def create_event(
     event: EventCreate,
     session: AsyncSession = Depends(get_session),
@@ -80,7 +86,11 @@ async def get_event(
     return EventRead.model_validate(event)
 
 
-@router.get("/{event_id}/feedback", response_model=list[FormSubmissionRead])
+@router.get(
+    "/{event_id}/feedback",
+    response_model=list[FormSubmissionRead],
+    dependencies=[Depends(require_admin)],
+)
 async def get_event_feedback(
     event_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -101,7 +111,7 @@ async def get_event_feedback(
     return [FormSubmissionRead.model_validate(submission) for submission in feedback]
 
 
-@router.patch("/{event_id}", response_model=EventRead)
+@router.patch("/{event_id}", response_model=EventRead, dependencies=[Depends(require_admin)])
 async def update_event(
     event_id: UUID,
     event: EventUpdate,
@@ -118,7 +128,11 @@ async def update_event(
     return EventRead.model_validate(updated_event)
 
 
-@router.delete("/{event_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_id}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_event(
     event_id: UUID,
     session: AsyncSession = Depends(get_session),

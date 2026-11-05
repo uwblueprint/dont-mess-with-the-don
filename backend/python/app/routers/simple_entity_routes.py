@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_simple_entity_service
 from app.models import get_session
 from app.models.simple_entity import SimpleEntityCreate, SimpleEntityRead, SimpleEntityUpdate
 from app.services.implementations.simple_entity_service import SimpleEntityService
 
-# TODO: add authorization once auth is implemented
-router = APIRouter(prefix="/simple-entities", tags=["simple-entities"])
+router = APIRouter(
+    prefix="/simple-entities", tags=["simple-entities"], dependencies=[Depends(require_admin)]
+)
 
 
 @router.get("/", response_model=list[SimpleEntityRead])

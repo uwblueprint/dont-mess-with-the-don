@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from . import (
     attendance_routes,
+    auth_routes,
     entity_routes,
     event_routes,
     event_series_routes,
@@ -16,6 +17,7 @@ from . import (
 
 def init_app(app: FastAPI) -> None:
     """Initialize all routers with the FastAPI app"""
+    app.include_router(auth_routes.router)
     app.include_router(entity_routes.router)
     app.include_router(form_submission_routes.router)
     app.include_router(form_template_routes.router)

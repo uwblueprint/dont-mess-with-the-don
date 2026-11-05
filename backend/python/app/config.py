@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_timezone: str = Field(default="America/Toronto")
 
+    # Firebase Auth: the only thing needed to check ID tokens (no service-account key)
+    firebase_project_id: str = Field(default="")
+
 
 def get_settings() -> Settings:
     """Get settings based on environment"""

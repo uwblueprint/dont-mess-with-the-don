@@ -243,6 +243,24 @@ Reusable forms that aren't tied to one event, such as a post-event feedback form
 - `GET /events/{event_id}/feedback` returns every submission for that event that has a `form_id`. `GET /form_submissions/?form_id=...` filters by form.
 - A form can't be deleted while submissions still use it (409).
 
+## Auth
+
+Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The frontend signs people in with the Firebase SDK (`frontend/src/firebase.ts`) and sends their Firebase ID token on every request as `Authorization: Bearer <token>`. The backend checks it in `backend/python/app/dependencies/auth.py` and only needs `FIREBASE_PROJECT_ID` in the root `.env` (no service-account key).
+
+- Right after signing up with Firebase, the frontend calls `POST /auth/register` once to create the profile. People under 16 are rejected (a guardian registers them), and an email or phone number already on a profile gets a 409. `GET /users/me` returns the profile, including `role` (`attendee` or `admin`).
+- 401 means the token is missing or invalid. 403 means the account has no profile yet, or isn't allowed to do that.
+- Browsing events, event types and event series is public. Anyone logged in can register themselves or their children for an event and submit forms for them. Everything else is admin-only.
+- Nobody can make themselves an admin through the API. To make your local account one:
+  `docker exec -it don-db psql -U postgres -d dmwtd -c "UPDATE users SET role='admin' WHERE email='you@example.com';"`
+- To call protected routes from Swagger (`/docs`), get an ID token for a test account and paste it into **Authorize** (the API key is `REACT_APP_FIREBASE_API_KEY` from `frontend/.env`):
+  ```bash
+  curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<API_KEY>" \
+    -H "Content-Type: application/json" \
+    -d '{"email": "you@example.com", "password": "...", "returnSecureToken": true}'
+  ```
+  The token is the `idToken` field and lasts an hour.
+- Tests are logged in as a fake admin by default (`tests/functional/conftest.py`); `tests/functional/test_auth_routes.py` shows how to test as someone else.
+
 ## Version Control Guide
 
 - Branch off `main` for all feature work. Use the format `your-name/short-description` (e.g. `pranav/readme-update`)

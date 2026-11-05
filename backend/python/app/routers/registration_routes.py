@@ -4,16 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import ensure_can_act_for, get_current_user, require_admin
 from app.dependencies.services import get_registration_service
 from app.models import get_session
 from app.models.enum import RegistrationStatusEnum
 from app.models.registration import RegistrationCreate, RegistrationRead, RegistrationUpdate
+from app.models.user import User
 from app.services.implementations.registration_service import RegistrationService
 
 router = APIRouter(prefix="/registrations", tags=["registrations"])
 
 
-@router.get("/", response_model=list[RegistrationRead])
+@router.get("/", response_model=list[RegistrationRead], dependencies=[Depends(require_admin)])
 async def get_registrations(
     user_id: int | None = None,
     event_instance_id: UUID | None = None,
@@ -39,7 +41,9 @@ async def get_registrations(
         ) from e
 
 
-@router.get("/{registration_id}", response_model=RegistrationRead)
+@router.get(
+    "/{registration_id}", response_model=RegistrationRead, dependencies=[Depends(require_admin)]
+)
 async def get_registration(
     registration_id: int,
     session: AsyncSession = Depends(get_session),
@@ -65,10 +69,12 @@ async def get_registration(
 @router.post("/", response_model=RegistrationRead, status_code=http_status.HTTP_201_CREATED)
 async def create_registration(
     registration: RegistrationCreate,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
     registration_service: RegistrationService = Depends(get_registration_service),
 ) -> RegistrationRead:
-    """Create a new registration"""
+    """Create a new registration for yourself or your child (admins: for anyone)"""
+    await ensure_can_act_for(session, current_user, registration.user_id)
     try:
         created_registration = await registration_service.create_registration(session, registration)
         return RegistrationRead.model_validate(created_registration)
@@ -79,7 +85,9 @@ async def create_registration(
         ) from e
 
 
-@router.patch("/{registration_id}", response_model=RegistrationRead)
+@router.patch(
+    "/{registration_id}", response_model=RegistrationRead, dependencies=[Depends(require_admin)]
+)
 async def update_registration(
     registration_id: int,
     registration: RegistrationUpdate,
@@ -110,7 +118,11 @@ async def update_registration(
     return RegistrationRead.model_validate(updated_registration)
 
 
-@router.delete("/{registration_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{registration_id}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_registration(
     registration_id: int,
     session: AsyncSession = Depends(get_session),

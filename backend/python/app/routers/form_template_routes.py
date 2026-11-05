@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import get_current_user, require_admin
 from app.dependencies.services import get_form_template_service
 from app.models import get_session
 from app.models.form_template import FormTemplateCreate, FormTemplateRead, FormTemplateUpdate
@@ -11,7 +12,7 @@ from app.services.implementations.form_template_service import FormTemplateServi
 router = APIRouter(prefix="/forms", tags=["forms"])
 
 
-@router.get("/", response_model=list[FormTemplateRead])
+@router.get("/", response_model=list[FormTemplateRead], dependencies=[Depends(get_current_user)])
 async def get_form_templates(
     session: AsyncSession = Depends(get_session),
     form_template_service: FormTemplateService = Depends(get_form_template_service),
@@ -21,7 +22,9 @@ async def get_form_templates(
     return [FormTemplateRead.model_validate(form_template) for form_template in form_templates]
 
 
-@router.get("/{form_template_id}", response_model=FormTemplateRead)
+@router.get(
+    "/{form_template_id}", response_model=FormTemplateRead, dependencies=[Depends(get_current_user)]
+)
 async def get_form_template(
     form_template_id: UUID,
     session: AsyncSession = Depends(get_session),
@@ -37,7 +40,12 @@ async def get_form_template(
     return FormTemplateRead.model_validate(form_template)
 
 
-@router.post("/", response_model=FormTemplateRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=FormTemplateRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 async def create_form_template(
     form_template: FormTemplateCreate,
     session: AsyncSession = Depends(get_session),
@@ -54,7 +62,9 @@ async def create_form_template(
         ) from error
 
 
-@router.patch("/{form_template_id}", response_model=FormTemplateRead)
+@router.patch(
+    "/{form_template_id}", response_model=FormTemplateRead, dependencies=[Depends(require_admin)]
+)
 async def update_form_template(
     form_template_id: UUID,
     form_template: FormTemplateUpdate,
@@ -79,7 +89,11 @@ async def update_form_template(
     return FormTemplateRead.model_validate(updated)
 
 
-@router.delete("/{form_template_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{form_template_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_form_template(
     form_template_id: UUID,
     session: AsyncSession = Depends(get_session),
