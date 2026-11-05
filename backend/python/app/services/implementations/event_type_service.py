@@ -68,6 +68,9 @@ class EventTypeService(IEventTypeService):
                 return None
 
             update_data = event_type_data.model_dump(exclude_unset=True, exclude_none=True)
+            if "notification_body" in event_type_data.model_fields_set:
+                body = event_type_data.notification_body
+                update_data["notification_body"] = (body.strip() or None) if body else None
             for field, value in update_data.items():
                 setattr(event_type, field, value)
 

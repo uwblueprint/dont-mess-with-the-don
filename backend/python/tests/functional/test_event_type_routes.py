@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import pytest
+
 BASE = "/event-types/"
 
 VALID_PAYLOAD = {
@@ -64,6 +66,27 @@ async def test_update_event_type_returns_200(client):
     response = await client.patch(f"{BASE}{event_type_id}", json={"location": "Waterloo"})
     assert response.status_code == 200
     assert response.json()["location"] == "Waterloo"
+
+
+@pytest.mark.parametrize("body", [None, "\n\t "])
+async def test_update_event_type_clears_notification_body(client, body):
+    create = await client.post(
+        BASE, json={**VALID_PAYLOAD, "notification_body": "Bring gloves."}
+    )
+    assert create.status_code == 201
+    url = f"{BASE}{create.json()['id']}"
+
+    omitted = await client.patch(url, json={"location": "Waterloo"})
+    assert omitted.status_code == 200
+    assert omitted.json()["notification_body"] == "Bring gloves."
+
+    updated = await client.patch(url, json={"notification_body": body})
+    assert updated.status_code == 200
+    assert updated.json()["notification_body"] is None
+
+    persisted = await client.get(url)
+    assert persisted.status_code == 200
+    assert persisted.json()["notification_body"] is None
 
 
 async def test_update_nonexistent_event_type_returns_404(client):

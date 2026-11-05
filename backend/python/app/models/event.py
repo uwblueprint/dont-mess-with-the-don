@@ -23,6 +23,7 @@ class EventBase(SQLModel):
     image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
+    notification_body: str | None = Field(default=None)
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 
@@ -63,4 +64,5 @@ class EventUpdate(SQLModel):
     end_datetime: datetime | None = Field(default=None)
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
+    notification_body: str | None = Field(default=None)
     form_json: dict | None = Field(default=None)

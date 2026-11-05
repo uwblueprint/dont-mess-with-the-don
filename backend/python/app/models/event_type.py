@@ -18,6 +18,7 @@ class EventTypeBase(SQLModel):
     location: str = Field(min_length=1, max_length=255)
     max_attendees: int = Field(ge=0)
     cancellation_cutoff_hours: int = Field(default=48, ge=0)
+    notification_body: str | None = Field(default=None)
     form_json: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
     @field_validator("image")
@@ -56,6 +57,7 @@ class EventTypeUpdate(SQLModel):
     location: str | None = Field(default=None, min_length=1, max_length=255)
     max_attendees: int | None = Field(default=None, ge=0)
     cancellation_cutoff_hours: int | None = Field(default=None, ge=0)
+    notification_body: str | None = Field(default=None)
     form_json: dict | None = Field(default=None)
 
     @field_validator("image")

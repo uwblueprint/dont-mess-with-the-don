@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.models.event import Event, EventCreate, EventUpdate
+from app.models.event_type import EventType
 
 
 class EventService:
@@ -52,10 +53,42 @@ class EventService:
 
         return event
 
+    async def _default_notification_body(
+        self, session: AsyncSession, event_type_id: UUID | None
+    ) -> str | None:
+        """Most recent non-empty blast for this type, else the type's default."""
+        if event_type_id is None:
+            return None
+
+        latest = await session.execute(
+            select(Event.notification_body)
+            .where(Event.event_type_id == event_type_id)
+            .where(func.trim(Event.notification_body) != "")
+            .order_by(Event.created_at.desc(), Event.id.desc())
+            .limit(1)
+        )
+        body = latest.scalar_one_or_none()
+        if body and body.strip():
+            return body.strip()
+
+        event_type = await session.get(EventType, event_type_id)
+        if event_type is None or not event_type.notification_body:
+            return None
+        fallback = event_type.notification_body.strip()
+        return fallback or None
+
     async def create_event(self, session: AsyncSession, event_data: EventCreate) -> Event:
         """Create new event"""
         try:
-            event = Event(**event_data.model_dump())
+            data = event_data.model_dump()
+            provided = data.get("notification_body")
+            if provided is None or not provided.strip():
+                data["notification_body"] = await self._default_notification_body(
+                    session, event_data.event_type_id
+                )
+            else:
+                data["notification_body"] = provided.strip()
+            event = Event(**data)
             session.add(event)
             await session.commit()
             await session.refresh(event)
@@ -79,6 +112,9 @@ class EventService:
                 return None
 
             update_data = event_data.model_dump(exclude_unset=True)
+            if "notification_body" in update_data:
+                body = update_data["notification_body"]
+                update_data["notification_body"] = (body.strip() or None) if body else None
             for field, value in update_data.items():
                 setattr(event, field, value)
 
