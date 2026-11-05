@@ -6,9 +6,9 @@ from sqlmodel import SQLModel, select
 
 from app import models
 from app.config import settings
+from app.models.enum import EventRegistrationTypeEnum
 from app.models.event import Event
 from app.models.event_series import EventSeries
-from app.models.enum import EventRegistrationTypeEnum
 from app.services.jobs.event_generation_jobs import generate_recurring_events
 
 
