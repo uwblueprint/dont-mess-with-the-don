@@ -252,13 +252,15 @@ Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The fronte
 - Browsing events, event types and event series is public. Anyone logged in can register themselves or their children for an event and submit forms for them. Everything else is admin-only.
 - Nobody can make themselves an admin through the API. To make your local account one:
   `docker exec -it don-db psql -U postgres -d dmwtd -c "UPDATE users SET role='admin' WHERE email='you@example.com';"`
-- To call protected routes from Swagger (`/docs`), get an ID token for a test account and paste it into **Authorize** (the API key is `REACT_APP_FIREBASE_API_KEY` from `frontend/.env`):
-  ```bash
-  curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=<API_KEY>" \
-    -H "Content-Type: application/json" \
-    -d '{"email": "you@example.com", "password": "...", "returnSecureToken": true}'
-  ```
-  The token is the `idToken` field and lasts an hour.
+- To call protected routes from Swagger (`/docs`):
+  1. Get an ID token (the API key is `REACT_APP_FIREBASE_API_KEY` from `frontend/.env`). The first time, `accounts:signUp` creates your test account; after that, use `accounts:signInWithPassword` with the same body.
+     ```bash
+     curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=<API_KEY>" \
+       -H "Content-Type: application/json" \
+       -d '{"email": "you@example.com", "password": "...", "returnSecureToken": true}'
+     ```
+  2. Copy the `idToken` from the response (it lasts an hour) and paste it into **Authorize** in Swagger.
+  3. The first time, call `POST /auth/register`, then make yourself an admin with the command above.
 - Tests are logged in as a fake admin by default (`tests/functional/conftest.py`); `tests/functional/test_auth_routes.py` shows how to test as someone else.
 
 ## Version Control Guide
