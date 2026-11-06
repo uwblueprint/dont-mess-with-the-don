@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     # Firebase Auth: the only thing needed to check ID tokens (no service-account key)
     firebase_project_id: str = Field(default="")
 
+    # Object storage (AWS S3)
+    aws_access_key_id: str = Field(default="")
+    aws_secret_access_key: str = Field(default="")
+    aws_region: str = Field(default="")
+    s3_bucket_name: str = Field(default="")
+    s3_key_prefix: str = Field(default="")
+    s3_endpoint_url: str = Field(default="")  # LocalStack/MinIO only
+
 
 def get_settings() -> Settings:
     """Get settings based on environment"""
