@@ -243,6 +243,18 @@ Reusable forms that aren't tied to one event, such as a post-event feedback form
 - `GET /events/{event_id}/feedback` returns every submission for that event that has a `form_id`. `GET /form_submissions/?form_id=...` filters by form.
 - A form can't be deleted while submissions still use it (409).
 
+## Object storage (S3)
+
+File uploads go to AWS S3 through `S3StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). It supports `upload_file` and `delete_file`. Config is read from the root `.env` through `app/config.py`:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `S3_BUCKET_NAME` | yes | Use a different bucket per environment (e.g. dev vs prod) |
+| `AWS_REGION` | yes | e.g. `ca-central-1` |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | yes locally | Optional where an IAM role is attached (boto3 default chain) |
+| `S3_KEY_PREFIX` | no | e.g. `dev/` or `prod/` if environments share a bucket |
+| `S3_ENDPOINT_URL` | no | Only for LocalStack/MinIO |
+
 ## Auth
 
 Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The frontend signs people in with the Firebase SDK (`frontend/src/firebase.ts`) and sends their Firebase ID token on every request as `Authorization: Bearer <token>`. The backend checks it in `backend/python/app/dependencies/auth.py` and only needs `FIREBASE_PROJECT_ID` in the root `.env` (no service-account key).
