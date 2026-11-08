@@ -12,7 +12,7 @@ from app.services.implementations.form_template_service import FormTemplateServi
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
-from app.services.implementations.storage_service import S3StorageService
+from app.services.implementations.storage_service import R2StorageService
 from app.services.implementations.user_service import UserService
 
 
@@ -93,9 +93,9 @@ def get_event_type_service() -> EventTypeService:
 
 
 @lru_cache
-def get_storage_service() -> S3StorageService:
+def get_storage_service() -> R2StorageService:
     """Get storage service instance (bucket/credentials come from settings)"""
-    return S3StorageService(get_logger(), settings)
+    return R2StorageService(get_logger(), settings)
 
 
 @lru_cache

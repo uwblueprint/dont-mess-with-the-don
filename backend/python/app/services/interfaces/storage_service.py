@@ -4,11 +4,13 @@ from typing import BinaryIO
 
 class IStorageService(ABC):
     """
-    StorageService interface for handling object storage (file upload/delete)
+    StorageService interface for handling object storage (Cloudflare R2) file upload/delete
     """
 
     @abstractmethod
-    def upload_file(self, file_obj: BinaryIO, key: str, content_type: str | None = None) -> str:
+    async def upload_file(
+        self, file_obj: BinaryIO, key: str, content_type: str | None = None
+    ) -> str:
         """
         Uploads a file to the object store
 
@@ -21,9 +23,10 @@ class IStorageService(ABC):
         pass
 
     @abstractmethod
-    def delete_file(self, key: str) -> None:
+    async def delete_file(self, key: str) -> None:
         """
-        Deletes a file from the object store. Deleting a missing key is not an error.
+        Deletes a file from the object store.
+        Deleting a missing key is not an error.
 
         :param key: object key, relative to the environment's key prefix
         :raises Exception: if the delete fails
