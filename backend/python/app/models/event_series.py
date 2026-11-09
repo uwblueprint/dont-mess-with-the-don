@@ -1,6 +1,8 @@
 from datetime import datetime, time
 from uuid import UUID, uuid4
 
+from dateutil.rrule import rrulestr
+from pydantic import field_validator
 from sqlalchemy import ARRAY, Enum, String
 from sqlmodel import Column, Field, SQLModel
 
@@ -11,7 +13,11 @@ from .enum import EventRegistrationTypeEnum
 class EventSeriesBase(SQLModel):
     """Shared fields between table and API models"""
 
-    recurrence: str = Field(min_length=1, max_length=255)
+    recurrence: str = Field(
+        min_length=1,
+        max_length=255,
+        description="An RFC 5545 RRULE, for example FREQ=WEEKLY;BYDAY=SA",
+    )
     is_active: bool = Field(default=True)
     name: str = Field(min_length=1, max_length=255)
     description: str = Field(min_length=1)
@@ -35,6 +41,16 @@ class EventSeriesBase(SQLModel):
             nullable=False,
         ),
     )
+
+    @field_validator("recurrence")
+    @classmethod
+    def validate_recurrence(cls, value: str) -> str:
+        """Require an RFC 5545 RRULE that can be expanded by the event job."""
+        try:
+            rrulestr(value, dtstart=datetime(2000, 1, 1))
+        except (TypeError, ValueError) as error:
+            raise ValueError("must be a valid RFC 5545 RRULE") from error
+        return value
 
 
 class EventSeries(EventSeriesBase, BaseModel, table=True):
@@ -77,3 +93,10 @@ class EventSeriesUpdate(SQLModel):
     image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     registration_type: EventRegistrationTypeEnum | None = Field(default=None)
+
+    @field_validator("recurrence")
+    @classmethod
+    def validate_recurrence(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return EventSeriesBase.validate_recurrence(value)

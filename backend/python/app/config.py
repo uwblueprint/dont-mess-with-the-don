@@ -48,6 +48,7 @@ class Settings(BaseSettings):
 
     # Scheduler
     scheduler_timezone: str = Field(default="America/Toronto")
+    event_generation_horizon_days: int = Field(default=90, ge=1)
 
     # Firebase Auth: the only thing needed to check ID tokens (no service-account key)
     firebase_project_id: str = Field(default="")

@@ -12,3 +12,11 @@ def init_jobs(scheduler_service: SchedulerService) -> None:
     2. Define your job function
     3. Import and register it here
     """
+    from .event_generation_jobs import generate_recurring_events
+
+    scheduler_service.add_cron_job(
+        generate_recurring_events,
+        job_id="generate_recurring_events",
+        hour=0,
+        minute=5,
+    )

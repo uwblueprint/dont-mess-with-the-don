@@ -49,6 +49,11 @@ async def test_create_event_series_empty_recurrence_returns_422(client):
     assert response.status_code == 422
 
 
+async def test_create_event_series_invalid_recurrence_returns_422(client):
+    response = await client.post(BASE, json=_test_payload(recurrence="not a recurrence rule"))
+    assert response.status_code == 422
+
+
 async def test_get_event_series_list_returns_200(client):
     await client.post(BASE, json=_test_payload(recurrence="FREQ=WEEKLY"))
     response = await client.get(BASE)
