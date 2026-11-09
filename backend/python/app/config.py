@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     # Firebase Auth: the only thing needed to check ID tokens (no service-account key)
     firebase_project_id: str = Field(default="")
 
+    # Object storage (Cloudflare R2)
+    r2_access_key_id: str = Field(default="")
+    r2_secret_access_key: str = Field(default="")
+    r2_bucket_name: str = Field(default="")
+    r2_key_prefix: str = Field(default="")
+    r2_endpoint_url: str = Field(default="")
+
 
 def get_settings() -> Settings:
     """Get settings based on environment"""
