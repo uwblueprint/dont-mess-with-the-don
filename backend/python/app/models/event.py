@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -8,6 +9,13 @@ from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
 from .form import validate_form_json
+
+CHECK_IN_TOKEN_MAX_LENGTH = 64
+
+
+def generate_check_in_token() -> str:
+    """Random URL-safe token (32 bytes of entropy, 43 characters)."""
+    return secrets.token_urlsafe(32)
 
 
 class EventBase(SQLModel):
@@ -34,6 +42,13 @@ class Event(EventBase, BaseModel, table=True):
     __tablename__ = "events"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Secret encoded in the event's check-in QR code. Kept off the API models
+    # so it is only exposed deliberately.
+    check_in_token: str = Field(
+        default_factory=generate_check_in_token,
+        unique=True,
+        max_length=CHECK_IN_TOKEN_MAX_LENGTH,
+    )
 
 
 class EventCreate(EventBase):
