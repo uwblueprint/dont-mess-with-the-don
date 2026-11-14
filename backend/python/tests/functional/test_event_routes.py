@@ -303,3 +303,24 @@ async def test_get_check_in_link_requires_login(app, client, event_service):
 
     assert response.status_code == 401
     assert event_service.get_event_calls == []
+
+
+async def test_get_events_does_not_expose_check_in_token(client, event_service):
+    event_service.events = [make_event_with_token("secret-token-list")]
+
+    response = await client.get(BASE)
+
+    assert response.status_code == 200
+    assert "check_in_token" not in response.json()[0]
+    assert "secret-token-list" not in response.text
+
+
+async def test_get_event_by_id_does_not_expose_check_in_token(client, event_service):
+    event = make_event_with_token("secret-token-detail")
+    event_service.get_event_result = event
+
+    response = await client.get(f"{BASE}/{event.id}")
+
+    assert response.status_code == 200
+    assert "check_in_token" not in response.json()
+    assert "secret-token-detail" not in response.text
