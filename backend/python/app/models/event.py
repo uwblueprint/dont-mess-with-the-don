@@ -68,6 +68,12 @@ class EventRead(EventBase):
     updated_at: datetime | None
 
 
+class EventCheckInLink(SQLModel):
+    """Check-in link for an event, encoded in its check-in QR code"""
+
+    url: str
+
+
 class EventUpdate(SQLModel):
     """Event update request - all fields optional"""
 

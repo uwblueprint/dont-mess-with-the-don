@@ -1,14 +1,16 @@
 from datetime import date, datetime, time
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.dependencies.auth import require_admin
 from app.dependencies.services import get_event_service, get_form_submission_service
 from app.models import get_session
-from app.models.event import EventCreate, EventRead, EventUpdate
+from app.models.event import EventCheckInLink, EventCreate, EventRead, EventUpdate
 from app.models.form_submission import FormSubmissionRead
 from app.services.implementations.event_service import EventService
 from app.services.implementations.form_submission_service import FormSubmissionService
@@ -109,6 +111,27 @@ async def get_event_feedback(
             detail=f"Event with id {event_id} not found",
         )
     return [FormSubmissionRead.model_validate(submission) for submission in feedback]
+
+
+@router.get(
+    "/{event_id}/check-in-link",
+    response_model=EventCheckInLink,
+    dependencies=[Depends(require_admin)],
+)
+async def get_event_check_in_link(
+    event_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    event_service: EventService = Depends(get_event_service),
+) -> EventCheckInLink:
+    """Get the frontend check-in link for an event (the URL its QR code encodes)"""
+    event = await event_service.get_event(session, event_id)
+    if not event:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found",
+        )
+    query = urlencode({"event": str(event.id), "token": event.check_in_token})
+    return EventCheckInLink(url=f"{settings.frontend_url.rstrip('/')}/check-in?{query}")
 
 
 @router.patch("/{event_id}", response_model=EventRead, dependencies=[Depends(require_admin)])
