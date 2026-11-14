@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     port: int = Field(default=8080)
     host: str = Field(default="0.0.0.0")
 
+    # Frontend base URL, used to build links that point at the frontend
+    # (e.g. event check-in links)
+    frontend_url: str = Field(default="http://localhost:3000")
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"

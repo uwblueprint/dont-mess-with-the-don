@@ -254,6 +254,10 @@ File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R
 | `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token|
 | `R2_KEY_PREFIX` | no | e.g. `dev/` or `prod/` if environments share a bucket |
 
+## Frontend URL
+
+The backend builds some links that point at the frontend (for example event check-in links). It reads the frontend's base URL from `FRONTEND_URL` in the root `.env`, defaulting to `http://localhost:3000`. Set it in every deployed environment, e.g. `FRONTEND_URL=https://<frontend domain>`.
+
 ## Auth
 
 Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The frontend signs people in with the Firebase SDK (`frontend/src/firebase.ts`) and sends their Firebase ID token on every request as `Authorization: Bearer <token>`. The backend checks it in `backend/python/app/dependencies/auth.py` and only needs `FIREBASE_PROJECT_ID` in the root `.env` (no service-account key).
