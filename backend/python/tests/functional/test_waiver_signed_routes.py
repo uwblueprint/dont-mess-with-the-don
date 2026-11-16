@@ -5,6 +5,8 @@ import pytest_asyncio
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 
+from app.dependencies.auth import get_current_user
+from app.models.enum import UserRole
 from app.models.user import User
 from app.models.waiver_signed import WaiverSigned
 
@@ -45,6 +47,43 @@ async def signed_waiver(session):
     session.add(waiver)
     await session.commit()
     return waiver
+
+
+def act_as(app, user):
+    app.dependency_overrides[get_current_user] = lambda: user
+
+
+async def test_owner_gets_five_minute_url(app, client, signed_waiver):
+    act_as(app, User(id=OWNER_ID, email="c@example.com", role=UserRole.ATTENDEE))
+    response = await client.get(f"/waiver-signed/{signed_waiver.id}/url")
+    assert response.status_code == 200
+    assert response.json() == {
+        "url": "https://private.test/waivers/10/abc.pdf?expires=300",
+        "expires_in": 300,
+    }
+
+
+async def test_guardian_gets_url(app, client, signed_waiver):
+    act_as(app, User(id=GUARDIAN_ID, email="g@example.com", role=UserRole.ATTENDEE))
+    response = await client.get(f"/waiver-signed/{signed_waiver.id}/url")
+    assert response.status_code == 200
+
+
+async def test_admin_gets_url(client, signed_waiver):
+    # the default test user is an admin
+    response = await client.get(f"/waiver-signed/{signed_waiver.id}/url")
+    assert response.status_code == 200
+
+
+async def test_other_user_gets_403(app, client, signed_waiver):
+    act_as(app, User(id=99, email="x@example.com", role=UserRole.ATTENDEE))
+    response = await client.get(f"/waiver-signed/{signed_waiver.id}/url")
+    assert response.status_code == 403
+
+
+async def test_missing_waiver_returns_404(client):
+    response = await client.get(f"/waiver-signed/{uuid4()}/url")
+    assert response.status_code == 404
 
 
 async def test_signing_twice_for_same_event_and_template_is_rejected(session, signed_waiver):

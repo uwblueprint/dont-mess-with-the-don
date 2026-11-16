@@ -262,6 +262,22 @@ The R2 settings are required in production, where missing ones fail the deploy. 
 
 R2 enables public access per bucket, so each environment has two buckets: a public one for objects anyone may fetch and a private one reachable only through short-lived signed URLs. `url_for(key, visibility)` builds either: a permanent public URL, or a signed URL (signing is local, no network call). `upload_file` and `delete_file` take a `BucketVisibility` to pick the bucket. Keys are UUID-based (`events/{event_id}/{uuid}.jpg`, from `build_key`), never the uploaded filename, and the environment's key prefix is applied by the service, so the same key works in every environment.
 
+### Access model: public-read vs signed URLs
+
+The database stores **object keys only** (never URLs, never a signed URL). Serializers in `app/serializers/` build each response from its row and call `url_for` on the storage service for the URL fields; routes return `event_read(event, storage)` and so on, and the ORM models know nothing about storage.
+
+| Type | Column | Bucket / access | Lifetime |
+|---|---|---|---|
+| Event / series / type headline image | `events.headline_image_key`, `event_series.headline_image_key`, `event_types.headline_image_key` | public; permanent URL | n/a |
+| Waiver template (blank PDF) | `waiver_template.document_key` | public; permanent URL | n/a |
+| Profile pic | `users.profile_pic_key` | private; signed URL | ~1 hour |
+| Post-event photos (events only) | `events.post_event_photo_keys[]` | private; signed URL, admin create/update responses only | ~1 hour |
+| Completed waivers | `waiver_signed.document_key` | private; signed URL, owner / guardian / admin only | ~5 minutes |
+
+Why: headline images and blank templates are promotional or contain no personal data, so a public URL is fine (and cacheable). Photos of identifiable people (often minors) and signed waivers are private, so deleting the object makes every link stop working within the URL lifetime. Signing is local (no network call).
+
+API responses return resolved URLs only (never keys), in the fields `headline_image_url`, `post_event_photo_urls`, `profile_pic_url` and `document_url`. **Frontend:** treat them as opaque strings, and refetch the record when an image returns 403 or the URL has expired. `post_event_photo_urls` (post-event photos) are filled only in admin create/update responses; the public `GET /events` endpoints return an empty list. Event series have no post-event photos. Completed waivers are fetched with `GET /waiver-signed/{id}/url`, which checks authorization and returns a fresh 5-minute URL.
+
 ## Frontend URL
 
 The backend builds some links that point at the frontend (for example event check-in links). It reads the frontend's base URL from `FRONTEND_URL` in the root `.env`, defaulting to `http://localhost:3000`. Set it in every deployed environment, e.g. `FRONTEND_URL=https://<frontend domain>`.

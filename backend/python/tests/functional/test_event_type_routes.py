@@ -37,9 +37,11 @@ async def test_create_event_type_image_url_instead_of_key_returns_422(client):
     assert response.status_code == 422
 
 
-async def test_event_type_response_returns_image_key(client):
+async def test_event_type_response_has_public_image_url_and_hides_key(client):
     response = await client.post(BASE, json=VALID_PAYLOAD)
-    assert response.json()["headline_image_key"] == "event-images/poker.png"
+    body = response.json()
+    assert body["headline_image_url"] == "https://public.test/event-images/poker.png"
+    assert "headline_image_key" not in body
 
 
 async def test_get_event_types_returns_200(client):

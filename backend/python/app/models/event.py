@@ -72,6 +72,10 @@ class EventCreate(EventBase):
 class EventRead(EventBase):
     """Event response model"""
 
+    headline_image_key: str = Field(exclude=True)  # keys are internal and excluded from output
+    post_event_photo_keys: list[str] = Field(default_factory=list, exclude=True)
+    headline_image_url: str
+    post_event_photo_urls: list[str] = Field(default_factory=list)
     id: UUID
     created_at: datetime | None
     updated_at: datetime | None
