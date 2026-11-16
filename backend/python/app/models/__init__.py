@@ -89,6 +89,7 @@ def register_models() -> None:
     from .registration import Registration  # noqa: F401
     from .simple_entity import SimpleEntity  # noqa: F401
     from .user import User  # noqa: F401
+    from .waiver_signed import WaiverSigned  # noqa: F401
     from .waiver_template import WaiverTemplate  # noqa: F401
 
 

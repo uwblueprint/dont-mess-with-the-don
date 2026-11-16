@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -162,7 +163,14 @@ async def delete_event(
     event_service: EventService = Depends(get_event_service),
 ) -> None:
     """Delete an event"""
-    success = await event_service.delete_event(session, event_id)
+    try:
+        success = await event_service.delete_event(session, event_id)
+    except IntegrityError as e:
+        # e.g. signed waivers (legal records) or registrations still point at this event
+        raise HTTPException(
+            status_code=http_status.HTTP_409_CONFLICT,
+            detail="Event has records that must be kept (such as signed waivers)",
+        ) from e
     if not success:
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,

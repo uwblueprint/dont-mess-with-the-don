@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
 from app.dependencies.auth import get_current_user
@@ -64,6 +65,7 @@ class FakeEventService:
         self.create_event_result = self.events[0]
         self.update_event_result = self.events[0]
         self.delete_event_result = True
+        self.delete_event_error: Exception | None = None
 
     async def get_events(self, session, **filters):
         self.get_events_calls.append(filters)
@@ -83,6 +85,8 @@ class FakeEventService:
 
     async def delete_event(self, session, event_id: UUID):
         self.delete_event_calls.append(event_id)
+        if self.delete_event_error:
+            raise self.delete_event_error
         return self.delete_event_result
 
 
@@ -338,3 +342,12 @@ async def test_create_event_rejects_url_as_image_key(client, event_service):
         BASE, json=event_request_payload(headline_image_key="https://example.com/a.jpg")
     )
     assert response.status_code == 422
+
+
+async def test_delete_event_with_signed_waivers_returns_409(client, event_service):
+    # waiver_signed.event_id is ON DELETE RESTRICT
+    event_service.delete_event_error = IntegrityError("DELETE", {}, Exception("fk"))
+
+    response = await client.delete(f"{BASE}/{uuid4()}")
+
+    assert response.status_code == 409
