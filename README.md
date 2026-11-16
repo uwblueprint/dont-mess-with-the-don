@@ -271,12 +271,12 @@ The database stores **object keys only** (never URLs, never a signed URL). Seria
 | Event / series / type headline image | `events.headline_image_key`, `event_series.headline_image_key`, `event_types.headline_image_key` | public; permanent URL | n/a |
 | Waiver template (blank PDF) | `waiver_template.document_key` | public; permanent URL | n/a |
 | Profile pic | `users.profile_pic_key` | private; signed URL | ~1 hour |
-| Post-event photos (events only) | `events.post_event_photo_keys[]` | private; signed URL, admin create/update responses only | ~1 hour |
+| Post-event photos (events only) | `events.post_event_photo_keys[]` | private; signed URL, admins and the event's attendees only | ~1 hour |
 | Completed waivers | `waiver_signed.document_key` | private; signed URL, owner / guardian / admin only | ~5 minutes |
 
 Why: headline images and blank templates are promotional or contain no personal data, so a public URL is fine (and cacheable). Photos of identifiable people (often minors) and signed waivers are private, so deleting the object makes every link stop working within the URL lifetime. Signing is local (no network call).
 
-API responses return resolved URLs only (never keys), in the fields `headline_image_url`, `post_event_photo_urls`, `profile_pic_url` and `document_url`. **Frontend:** treat them as opaque strings, and refetch the record when an image returns 403 or the URL has expired. `post_event_photo_urls` (post-event photos) are filled only in admin create/update responses; the public `GET /events` endpoints return an empty list. Event series have no post-event photos. Completed waivers are fetched with `GET /waiver-signed/{id}/url`, which checks authorization and returns a fresh 5-minute URL.
+API responses return resolved URLs only (never keys), in the fields `headline_image_url`, `post_event_photo_urls`, `profile_pic_url` and `document_url`. **Frontend:** treat them as opaque strings, and refetch the record when an image returns 403 or the URL has expired. `post_event_photo_urls` (post-event photos) are filled only for admins and the event's attendees: anyone with an accepted registration or a check-in for that event, and the guardian of such a child (`app/utilities/photo_access.py`). Everyone else, including anonymous callers, gets an empty list. Event series have no post-event photos. Completed waivers are fetched with `GET /waiver-signed/{id}/url`, which checks authorization and returns a fresh 5-minute URL.
 
 ## Frontend URL
 

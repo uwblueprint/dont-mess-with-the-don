@@ -71,6 +71,28 @@ async def get_current_user(
     return user
 
 
+async def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session: AsyncSession = Depends(get_session),
+    user_service: UserService = Depends(get_user_service),
+) -> User | None:
+    """The logged-in user's profile, or None for anonymous callers (or no profile yet).
+
+    Used on public endpoints that return signed-URL content to logged-in users.
+    An invalid or expired token is treated as anonymous rather than a 401, so a stale
+    token in the frontend can't break a public page; it just gets the public view.
+    """
+    if credentials is None:
+        return None
+    try:
+        claims = await get_token_claims(credentials)
+    except HTTPException as e:
+        if e.status_code == status.HTTP_401_UNAUTHORIZED:
+            return None
+        raise
+    return await user_service.get_user_by_firebase_uid(session, claims["uid"])
+
+
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
