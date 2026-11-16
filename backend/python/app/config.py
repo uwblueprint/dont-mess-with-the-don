@@ -63,9 +63,14 @@ class Settings(BaseSettings):
     # Object storage (Cloudflare R2)
     r2_access_key_id: str = Field(default="")
     r2_secret_access_key: str = Field(default="")
-    r2_bucket_name: str = Field(default="")
+    r2_public_bucket_name: str = Field(default="")
+    r2_private_bucket_name: str = Field(default="")
+    r2_public_base_url: str = Field(default="")
     r2_key_prefix: str = Field(default="")
     r2_endpoint_url: str = Field(default="")
+    # Signed URL lifetimes (seconds)
+    signed_url_ttl_media_seconds: int = Field(default=3600)
+    signed_url_ttl_waiver_signed_seconds: int = Field(default=300)
 
 
 def get_settings() -> Settings:
