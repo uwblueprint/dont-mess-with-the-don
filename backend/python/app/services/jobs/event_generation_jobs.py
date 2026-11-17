@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from dateutil.rrule import rrulestr
-from sqlmodel import select
+from sqlmodel import col, select
 
 from app import models
 from app.config import settings
@@ -75,7 +75,7 @@ async def generate_recurring_events(now: datetime | None = None) -> int:
     try:
         async with models.async_session_maker_instance() as session:
             result = await session.execute(
-                select(EventSeries).where(EventSeries.is_active.is_(True))
+                select(EventSeries).where(col(EventSeries.is_active).is_(True))
             )
             series_list = result.scalars().all()
 

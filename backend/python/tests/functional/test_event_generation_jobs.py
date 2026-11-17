@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from typing import Any
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -26,7 +27,7 @@ async def job_session_maker(monkeypatch):
 
 
 def make_series(**overrides) -> EventSeries:
-    values = {
+    values: dict[str, Any] = {
         "recurrence": "FREQ=DAILY",
         "is_active": True,
         "name": "Morning Cleanup",

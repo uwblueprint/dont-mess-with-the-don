@@ -9,6 +9,10 @@ from sqlmodel import Column, Field, SQLModel
 from .base import BaseModel
 from .enum import EventRegistrationTypeEnum
 
+# Rules the recurring-event job can expand safely (see validate_recurrence)
+ALLOWED_FREQUENCIES = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
+TIME_OF_DAY_PARTS = {"BYHOUR", "BYMINUTE", "BYSECOND"}
+
 
 class EventSeriesBase(SQLModel):
     """Shared fields between table and API models"""
@@ -45,11 +49,31 @@ class EventSeriesBase(SQLModel):
     @field_validator("recurrence")
     @classmethod
     def validate_recurrence(cls, value: str) -> str:
-        """Require an RFC 5545 RRULE that can be expanded by the event job."""
+        """Require one RFC 5545 RRULE that the event job can expand safely.
+
+        Only DAILY, WEEKLY, MONTHLY or YEARLY with INTERVAL >= 1: shorter frequencies
+        create thousands of events, and INTERVAL=0 never finishes expanding. DTSTART
+        and BYHOUR/BYMINUTE/BYSECOND aren't allowed because the job anchors each
+        series at its own created_at date and start_time.
+        """
         try:
             rrulestr(value, dtstart=datetime(2000, 1, 1))
-        except (TypeError, ValueError) as error:
+        # IndexError: dateutil raises it for a DTSTART line with no RRULE
+        except (TypeError, ValueError, IndexError) as error:
             raise ValueError("must be a valid RFC 5545 RRULE") from error
+
+        rule = value.strip().upper().removeprefix("RRULE:")
+        if any(char.isspace() for char in rule):
+            raise ValueError("must be a single RRULE line, without DTSTART")
+        parts = dict(part.split("=", 1) for part in rule.split(";") if "=" in part)
+        if parts.get("FREQ") not in ALLOWED_FREQUENCIES:
+            raise ValueError("FREQ must be DAILY, WEEKLY, MONTHLY or YEARLY")
+        if int(parts.get("INTERVAL", "1")) < 1:
+            raise ValueError("INTERVAL must be at least 1")
+        if TIME_OF_DAY_PARTS & parts.keys():
+            raise ValueError(
+                "BYHOUR, BYMINUTE and BYSECOND aren't allowed; start_time sets the time"
+            )
         return value
 
 
