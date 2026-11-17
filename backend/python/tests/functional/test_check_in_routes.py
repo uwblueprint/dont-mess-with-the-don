@@ -28,7 +28,7 @@ async def create_event(client, start: datetime, end: datetime | None = None) -> 
             "location": "Toronto",
             "max_attendees": 20,
             "event_status": "published",
-            "image": "https://example.com/event.jpg",
+            "headline_image_key": "event-images/event.jpg",
             "start_datetime": start.isoformat(),
             "end_datetime": (end or start + timedelta(hours=2)).isoformat(),
         },
