@@ -15,7 +15,7 @@ def _test_payload(**overrides):
         "max_attendees": 10,
         "max_waitlist": 5,
         "event_status": "active",
-        "image": "test.png",
+        "headline_image_key": "event-images/test.png",
         "start_time": "10:00:00",
         "end_time": "12:00:00",
         "registration_type": "lottery",
@@ -142,3 +142,15 @@ async def test_delete_event_series_returns_204(client):
 async def test_delete_nonexistent_event_series_returns_404(client):
     response = await client.delete(f"{BASE}{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+async def test_event_series_has_no_post_event_photos(client):
+    response = await client.post(
+        BASE,
+        json=_test_payload(recurrence="FREQ=WEEKLY", post_event_photo_keys=["events/x/a.jpg"]),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert not [field for field in body if field.startswith("post_event_photo")]
+    listed = (await client.get(BASE)).json()
+    assert not [field for item in listed for field in item if field.startswith("post_event_photo")]

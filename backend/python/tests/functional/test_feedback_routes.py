@@ -52,7 +52,7 @@ async def create_event(client, name: str) -> str:
             "location": "Toronto",
             "max_attendees": 20,
             "event_status": "completed",
-            "image": "https://example.com/beach.png",
+            "headline_image_key": "event-images/beach.png",
             "start_datetime": "2026-09-15T10:00:00",
             "end_datetime": "2026-09-15T12:00:00",
             "form_json": REGISTRATION_FORM,

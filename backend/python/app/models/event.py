@@ -9,6 +9,7 @@ from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
 from .form import validate_form_json
+from .object_key import ObjectKey, ObjectKeys
 
 CHECK_IN_TOKEN_MAX_LENGTH = 64
 
@@ -27,12 +28,13 @@ class EventBase(SQLModel):
     max_attendees: int = Field(ge=0)
     event_status: str = Field(min_length=1, max_length=255)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
-    image: str = Field(min_length=1)
+    headline_image_key: ObjectKey = Field(min_length=1)
     start_datetime: datetime
     end_datetime: datetime
-    image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    post_event_photo_keys: ObjectKeys = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 
@@ -90,11 +92,12 @@ class EventUpdate(SQLModel):
     max_attendees: int | None = Field(default=None, ge=0)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
-    image: str | None = Field(default=None, min_length=1)
+    headline_image_key: ObjectKey | None = Field(default=None, min_length=1)
     start_datetime: datetime | None = Field(default=None)
     end_datetime: datetime | None = Field(default=None)
-    image_urls: list[str] | None = Field(default=None)
+    post_event_photo_keys: ObjectKeys | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     form_json: dict | None = Field(default=None)
 

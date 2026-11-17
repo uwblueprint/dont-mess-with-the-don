@@ -21,7 +21,7 @@ The target database is chosen the same way the app chooses it: ``APP_ENV``
 Notes on the CSV format:
   * Blank cells are treated as "not provided" and fall back to the model default
     (usually ``NULL``), so you can leave optional columns empty.
-  * JSON and array columns (e.g. ``form_json``, ``image_urls``) must contain
+  * JSON and array columns (e.g. ``form_json``, ``post_event_photo_keys``) must contain
     valid JSON, e.g. ``{"formId": "frm_beach_cleanup"}`` or ``["a", "b"]``. Standard
     CSV quoting applies, so wrap those cells in double quotes and double any
     internal quotes.
@@ -41,7 +41,7 @@ from sqlmodel import Session, SQLModel, create_engine, text
 
 load_dotenv()
 
-from app.models import get_database_url  # noqa: E402
+from app.models import get_database_url, register_models  # noqa: E402
 from app.models.attendance import Attendance  # noqa: E402
 from app.models.event import Event  # noqa: E402
 from app.models.event_type import EventType  # noqa: E402
@@ -142,6 +142,8 @@ def _has_data(session: Session) -> bool:
 
 
 def seed(reset: bool = False) -> None:
+    # Every model must be registered so foreign keys to unseeded tables resolve
+    register_models()
     sync_url = get_database_url().replace("postgresql+asyncpg://", "postgresql://")
     engine = create_engine(sync_url)
 

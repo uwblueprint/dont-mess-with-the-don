@@ -45,12 +45,12 @@ def _event_from_series(series: EventSeries, start_datetime: datetime) -> Event:
         max_attendees=series.max_attendees,
         event_status=series.event_status,
         event_type_id=series.event_type_id,
-        image=series.image,
+        headline_image_key=series.headline_image_key,
         start_datetime=start_datetime,
         end_datetime=end_datetime,
-        image_urls=series.image_urls,
         notes=series.notes,
         event_series_id=series.id,
+        waiver_template_id=series.waiver_template_id,
     )
 
 

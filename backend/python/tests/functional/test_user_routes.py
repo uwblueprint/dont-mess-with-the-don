@@ -15,11 +15,20 @@ async def test_create_user_duplicate_email_returns_409(client):
     assert response.status_code == 409
 
 
-async def test_create_user_invalid_profile_pic_url_returns_422(client):
+async def test_create_user_profile_pic_url_instead_of_key_returns_422(client):
     response = await client.post(
-        BASE, json={"email": "pic@example.com", "profile_pic_url": "not-a-url"}
+        BASE,
+        json={"email": "pic@example.com", "profile_pic_key": "https://example.com/pic.jpg"},
     )
     assert response.status_code == 422
+
+
+async def test_create_user_stores_profile_pic_key(client):
+    response = await client.post(
+        BASE, json={"email": "pic@example.com", "profile_pic_key": "users/1/abc.jpg"}
+    )
+    assert response.status_code == 201
+    assert response.json()["profile_pic_key"] == "users/1/abc.jpg"
 
 
 async def test_get_users_returns_200(client):

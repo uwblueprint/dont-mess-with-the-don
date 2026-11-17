@@ -100,7 +100,7 @@ the database already has data, so it is safe to leave enabled across restarts.
   columns empty.
 - Rows are inserted in file order, so list parents before children in
   `users.csv` (the `guardian_id` self-reference).
-- JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
+- JSON/array columns (`form_json`, `response_json`, `post_event_photo_keys`, `notes`) must
   contain valid JSON, e.g. `{"formId": "frm_beach_cleanup"}` or `["a", "b"]`.
   Wrap those cells in double quotes and double any internal quotes (standard
   CSV quoting).

@@ -152,7 +152,7 @@ async def test_strikes_expire_and_attendance_removes_a_no_show(client, app):
                 "location": "Toronto",
                 "max_attendees": 10,
                 "event_status": "published",
-                "image": "https://example.com/event.jpg",
+                "headline_image_key": "event-images/event.jpg",
                 "start_datetime": end_datetime.replace(hour=10).isoformat(),
                 "end_datetime": end_datetime.isoformat(),
             },

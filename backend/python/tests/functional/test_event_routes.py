@@ -7,7 +7,7 @@ from app.config import settings
 from app.dependencies.auth import get_current_user
 from app.dependencies.services import get_event_service
 from app.models.enum import UserRole
-from app.models.event import Event, EventCreate, EventRead, EventUpdate
+from app.models.event import Event, EventCreate, EventUpdate
 from app.models.user import User
 
 BASE = "/events"
@@ -29,17 +29,17 @@ def make_event(**overrides):
         "max_attendees": 25,
         "event_status": "published",
         "event_type_id": uuid4(),
-        "image": "https://example.com/headline.jpg",
+        "headline_image_key": "event-images/headline.jpg",
         "start_datetime": datetime(2026, 7, 15, 10, 0, 0),
         "end_datetime": datetime(2026, 7, 15, 12, 0, 0),
         "created_at": datetime(2026, 6, 1, 9, 0, 0),
         "updated_at": None,
-        "image_urls": ["https://example.com/upload.jpg"],
+        "post_event_photo_keys": ["events/e1/upload.jpg"],
         "notes": ["Bring gloves"],
         "form_json": VALID_FORM,
     }
     data.update(overrides)
-    return EventRead(**data)
+    return Event(**data)
 
 
 def event_request_payload(**overrides):
@@ -47,6 +47,7 @@ def event_request_payload(**overrides):
     data.pop("id")
     data.pop("created_at")
     data.pop("updated_at")
+    data.pop("check_in_token")
     data.update(overrides)
     return data
 
@@ -249,7 +250,7 @@ async def test_delete_nonexistent_event_returns_404(client, event_service):
 
 
 def make_event_with_token(check_in_token: str) -> Event:
-    return Event(**make_event().model_dump(), check_in_token=check_in_token)
+    return make_event(check_in_token=check_in_token)
 
 
 async def test_get_check_in_link_returns_frontend_url(client, event_service, monkeypatch):
@@ -324,3 +325,16 @@ async def test_get_event_by_id_does_not_expose_check_in_token(client, event_serv
     assert response.status_code == 200
     assert "check_in_token" not in response.json()
     assert "secret-token-detail" not in response.text
+
+
+async def test_event_response_returns_object_keys(client, event_service):
+    body = (await client.get(BASE)).json()[0]
+    assert body["headline_image_key"] == "event-images/headline.jpg"
+    assert body["post_event_photo_keys"] == ["events/e1/upload.jpg"]
+
+
+async def test_create_event_rejects_url_as_image_key(client, event_service):
+    response = await client.post(
+        BASE, json=event_request_payload(headline_image_key="https://example.com/a.jpg")
+    )
+    assert response.status_code == 422
