@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import ARRAY, String
+from sqlalchemy import ARRAY, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
@@ -40,6 +40,13 @@ class Event(EventBase, BaseModel, table=True):
     """Event model"""
 
     __tablename__ = "events"
+    __table_args__ = (
+        UniqueConstraint(
+            "event_series_id",
+            "start_datetime",
+            name="uq_events_event_series_start_datetime",
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     # Secret encoded in the event's check-in QR code. Kept off the API models

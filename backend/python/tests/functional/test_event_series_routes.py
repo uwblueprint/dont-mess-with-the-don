@@ -1,5 +1,7 @@
 import uuid
 
+import pytest
+
 BASE = "/event-series/"
 
 
@@ -46,6 +48,45 @@ async def test_create_event_series_missing_recurrence_returns_422(client):
 
 async def test_create_event_series_empty_recurrence_returns_422(client):
     response = await client.post(BASE, json=_test_payload(recurrence=""))
+    assert response.status_code == 422
+
+
+async def test_create_event_series_invalid_recurrence_returns_422(client):
+    response = await client.post(BASE, json=_test_payload(recurrence="not a recurrence rule"))
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "recurrence",
+    [
+        "FREQ=SECONDLY",
+        "FREQ=MINUTELY",
+        "FREQ=HOURLY",
+        "FREQ=DAILY;INTERVAL=0",
+        "FREQ=DAILY;BYHOUR=9,10",
+        "DTSTART:20260101T090000Z\nRRULE:FREQ=DAILY",
+        "DTSTART:20260101T090000",
+    ],
+)
+async def test_create_event_series_unsupported_recurrence_returns_422(client, recurrence):
+    response = await client.post(BASE, json=_test_payload(recurrence=recurrence))
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "recurrence",
+    ["FREQ=WEEKLY;BYDAY=SA", "RRULE:FREQ=DAILY;INTERVAL=2", "FREQ=MONTHLY;BYMONTHDAY=1"],
+)
+async def test_create_event_series_supported_recurrence_returns_201(client, recurrence):
+    response = await client.post(BASE, json=_test_payload(recurrence=recurrence))
+    assert response.status_code == 201
+
+
+async def test_update_event_series_unsupported_recurrence_returns_422(client):
+    created = await client.post(BASE, json=_test_payload())
+    response = await client.patch(
+        f"{BASE}{created.json()['id']}", json={"recurrence": "FREQ=MINUTELY"}
+    )
     assert response.status_code == 422
 
 
