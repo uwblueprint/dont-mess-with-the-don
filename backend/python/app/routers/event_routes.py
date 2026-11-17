@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import get_optional_user, require_admin
 from app.dependencies.services import (
     get_event_service,
     get_form_submission_service,
@@ -17,10 +17,12 @@ from app.dependencies.services import (
 from app.models import get_session
 from app.models.event import EventCheckInLink, EventCreate, EventRead, EventUpdate
 from app.models.form_submission import FormSubmissionRead
+from app.models.user import User
 from app.serializers.event import event_read
 from app.services.implementations.event_service import EventService
 from app.services.implementations.form_submission_service import FormSubmissionService
 from app.services.interfaces.storage_service import IStorageService
+from app.utilities.photo_access import get_event_ids_with_visible_photos
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -35,6 +37,7 @@ async def get_events(
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
     storage: IStorageService = Depends(get_storage_service),
+    current_user: User | None = Depends(get_optional_user),
 ) -> list[EventRead]:
     """Retrieve all events"""
     try:
@@ -52,8 +55,13 @@ async def get_events(
             starts_after=starts_after_datetime,
             starts_before=starts_before_datetime,
         )
-        # Post-event photos are not shown on public endpoints
-        return [event_read(e, storage) for e in events]
+        # Post-event photos only for admins and each event's attendees
+        visible_photo_event_ids = await get_event_ids_with_visible_photos(
+            session, current_user, [e.id for e in events]
+        )
+        return [
+            event_read(e, storage, include_photos=e.id in visible_photo_event_ids) for e in events
+        ]
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -88,6 +96,7 @@ async def get_event(
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
     storage: IStorageService = Depends(get_storage_service),
+    current_user: User | None = Depends(get_optional_user),
 ) -> EventRead:
     """Get a single event by ID"""
     event = await event_service.get_event(session, event_id)
@@ -96,7 +105,10 @@ async def get_event(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Event with id {event_id} not found",
         )
-    return event_read(event, storage)
+    visible_photo_event_ids = await get_event_ids_with_visible_photos(
+        session, current_user, [event.id]
+    )
+    return event_read(event, storage, include_photos=event.id in visible_photo_event_ids)
 
 
 @router.get(

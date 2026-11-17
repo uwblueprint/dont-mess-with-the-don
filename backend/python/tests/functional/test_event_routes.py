@@ -2,13 +2,16 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+import pytest_asyncio
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_optional_user
 from app.dependencies.services import get_event_service
-from app.models.enum import UserRole
+from app.models.attendance import Attendance
+from app.models.enum import RegistrationStatusEnum, UserRole
 from app.models.event import Event, EventCreate, EventUpdate
+from app.models.registration import Registration
 from app.models.user import User
 
 BASE = "/events"
@@ -331,8 +334,8 @@ async def test_get_event_by_id_does_not_expose_check_in_token(client, event_serv
     assert "secret-token-detail" not in response.text
 
 
-async def test_admin_create_response_resolves_urls_and_hides_keys(client, event_service):
-    body = (await client.post(BASE, json=event_request_payload())).json()
+async def test_event_response_resolves_urls_and_hides_keys(client, event_service):
+    body = (await client.get(BASE)).json()[0]
     assert body["headline_image_url"] == "https://public.test/event-images/headline.jpg"
     assert body["post_event_photo_urls"] == [
         "https://private.test/events/e1/upload.jpg?expires=3600"
@@ -341,7 +344,9 @@ async def test_admin_create_response_resolves_urls_and_hides_keys(client, event_
     assert "post_event_photo_keys" not in body
 
 
-async def test_public_event_responses_omit_post_event_photos(client, event_service):
+async def test_anonymous_event_response_omits_post_event_photos(app, client, event_service):
+    app.dependency_overrides[get_optional_user] = lambda: None
+
     for url in (BASE, f"{BASE}/{event_service.events[0].id}"):
         response = await client.get(url)
         body = response.json()
@@ -364,3 +369,100 @@ async def test_delete_event_with_signed_waivers_returns_409(client, event_servic
     response = await client.delete(f"{BASE}/{uuid4()}")
 
     assert response.status_code == 409
+
+
+# --- Post-event photo access: admins and the event's attendees only ---
+
+ATTENDEE_ID = 101
+GUARDIAN_ID = 102
+CHILD_ID = 103
+STRANGER_ID = 104
+PHOTO_URL = "https://private.test/events/e1/upload.jpg?expires=3600"
+
+
+@pytest_asyncio.fixture
+async def db(app, client):
+    from app.models import get_session
+
+    # Keep the generator referenced (yield, not return) so the session stays open
+    session_gen = app.dependency_overrides[get_session]()
+    session = await session_gen.__anext__()
+    session.add_all(
+        [
+            User(id=ATTENDEE_ID, email="attendee@example.com"),
+            User(id=GUARDIAN_ID, email="guardian@example.com"),
+            User(id=CHILD_ID, email="child@example.com", guardian_id=GUARDIAN_ID),
+            User(id=STRANGER_ID, email="stranger@example.com"),
+        ]
+    )
+    await session.commit()
+    yield session
+    await session_gen.aclose()
+
+
+def login_as(app, user_id):
+    user = User(id=user_id, email=f"{user_id}@example.com", role=UserRole.ATTENDEE)
+    app.dependency_overrides[get_optional_user] = lambda: user
+
+
+async def register(db, user_id, event_id, status=RegistrationStatusEnum.ACCEPTED):
+    db.add(Registration(user_id=user_id, event_instance_id=event_id, status=status))
+    await db.commit()
+
+
+async def photos_for(client, event_id):
+    response = await client.get(f"{BASE}/{event_id}")
+    assert response.status_code == 200
+    return response.json()["post_event_photo_urls"]
+
+
+async def test_accepted_registrant_sees_photos(app, client, event_service, db):
+    event_id = event_service.events[0].id
+    await register(db, ATTENDEE_ID, event_id)
+    login_as(app, ATTENDEE_ID)
+    assert await photos_for(client, event_id) == [PHOTO_URL]
+
+
+@pytest.mark.parametrize(
+    "status", [RegistrationStatusEnum.WAITLIST, RegistrationStatusEnum.CANCELLED]
+)
+async def test_waitlisted_or_cancelled_registrant_gets_no_photos(
+    app, client, event_service, db, status
+):
+    event_id = event_service.events[0].id
+    await register(db, ATTENDEE_ID, event_id, status)
+    login_as(app, ATTENDEE_ID)
+    assert await photos_for(client, event_id) == []
+
+
+async def test_unrelated_logged_in_user_gets_no_photos(app, client, event_service, db):
+    event_id = event_service.events[0].id
+    await register(db, ATTENDEE_ID, event_id)
+    login_as(app, STRANGER_ID)
+    assert await photos_for(client, event_id) == []
+
+
+async def test_guardian_of_accepted_child_sees_photos(app, client, event_service, db):
+    event_id = event_service.events[0].id
+    await register(db, CHILD_ID, event_id)
+    login_as(app, GUARDIAN_ID)
+    assert await photos_for(client, event_id) == [PHOTO_URL]
+
+
+async def test_check_in_without_registration_sees_photos(app, client, event_service, db):
+    event_id = event_service.events[0].id
+    db.add(Attendance(user_id=ATTENDEE_ID, event_instance_id=event_id))
+    await db.commit()
+    login_as(app, ATTENDEE_ID)
+    assert await photos_for(client, event_id) == [PHOTO_URL]
+
+
+async def test_event_list_signs_photos_only_for_events_attended(app, client, event_service, db):
+    attended, other = make_event(), make_event()
+    event_service.events = [attended, other]
+    await register(db, ATTENDEE_ID, attended.id)
+    login_as(app, ATTENDEE_ID)
+
+    body = {e["id"]: e["post_event_photo_urls"] for e in (await client.get(BASE)).json()}
+
+    assert body == {str(attended.id): [PHOTO_URL], str(other.id): []}

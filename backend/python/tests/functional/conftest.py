@@ -10,7 +10,7 @@ from sqlalchemy.types import ARRAY
 from sqlmodel import SQLModel
 
 from app import create_app
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_optional_user
 from app.dependencies.services import get_storage_service
 from app.models import get_session
 from app.models.enum import BucketVisibility, UserRole
@@ -71,6 +71,8 @@ async def client(app):
 
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_current_user] = lambda: FAKE_ADMIN
+    # Logged in by default, so signed (private) URLs are included in responses
+    app.dependency_overrides[get_optional_user] = lambda: FAKE_ADMIN
     app.dependency_overrides[get_storage_service] = lambda: FakeStorage()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
