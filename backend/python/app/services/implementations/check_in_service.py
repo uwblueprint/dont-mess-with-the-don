@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
@@ -13,6 +14,7 @@ from app.models.check_in import (
     CheckInEventRead,
     CheckInPersonRead,
     CheckInRegistrationStatus,
+    CheckInResult,
     CheckInStatusRead,
     CheckInWindow,
     CheckInWindowState,
@@ -26,6 +28,12 @@ _REGISTRATION_STATUS = {
     RegistrationStatusEnum.ACCEPTED: CheckInRegistrationStatus.ACCEPTED,
     RegistrationStatusEnum.WAITLIST: CheckInRegistrationStatus.WAITLISTED,
     RegistrationStatusEnum.CANCELLED: CheckInRegistrationStatus.CANCELLED,
+}
+
+_RESULT_WHEN_NOT_ACCEPTED = {
+    CheckInRegistrationStatus.NOT_REGISTERED: CheckInResult.NOT_REGISTERED,
+    CheckInRegistrationStatus.WAITLISTED: CheckInResult.WAITLISTED,
+    CheckInRegistrationStatus.CANCELLED: CheckInResult.CANCELLED,
 }
 
 
@@ -131,3 +139,35 @@ class CheckInService:
             window=self.get_window(event, now),
             people=people,
         )
+
+    async def check_in_person(
+        self, session: AsyncSession, event_id: UUID, user_id: int, now: datetime
+    ) -> CheckInResult:
+        """Check one person in, committing on its own so one failure doesn't undo the others.
+
+        The caller must already have checked the token, the window, and that the
+        current user may act for user_id.
+        """
+        registration_status = await self.get_registration_status(session, user_id, event_id)
+        if registration_status != CheckInRegistrationStatus.ACCEPTED:
+            return _RESULT_WHEN_NOT_ACCEPTED[registration_status]
+
+        attendance = await self.get_attendance(session, user_id, event_id)
+        if attendance is not None and attendance.attended_at is not None:
+            return CheckInResult.ALREADY_CHECKED_IN
+        if attendance is None:
+            session.add(Attendance(user_id=user_id, event_instance_id=event_id, attended_at=now))
+        else:
+            attendance.attended_at = now
+            attendance.updated_at = now
+
+        try:
+            await session.commit()
+        except IntegrityError:
+            # Another scan for the same person inserted the row first (unique constraint)
+            await session.rollback()
+            existing = await self.get_attendance(session, user_id, event_id)
+            if existing is not None and existing.attended_at is not None:
+                return CheckInResult.ALREADY_CHECKED_IN
+            raise
+        return CheckInResult.CHECKED_IN

@@ -4,10 +4,11 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models.check_in import CheckInRegistrationStatus, CheckInWindowState
+from app.models.check_in import CheckInRegistrationStatus, CheckInResult, CheckInWindowState
 from app.services.implementations.check_in_service import (
     CheckInService,
     EventNotFoundError,
@@ -124,3 +125,40 @@ async def test_get_registration_status_maps_latest_registration(db_status, expec
     status = await _service().get_registration_status(session, user_id=1, event_id=uuid4())
 
     assert status == expected
+
+
+# --- concurrent scans ---
+
+
+async def test_check_in_person_returns_already_checked_in_when_a_concurrent_scan_wins():
+    accepted = Mock()
+    accepted.scalars.return_value.first.return_value = Mock(status="accepted")
+    no_row_yet = Mock()
+    no_row_yet.scalars.return_value.first.return_value = None
+    row_from_other_scan = Mock()
+    row_from_other_scan.scalars.return_value.first.return_value = Mock(attended_at=START)
+    session = AsyncMock(spec=AsyncSession)
+    session.add = Mock()
+    session.execute.side_effect = [accepted, no_row_yet, row_from_other_scan]
+    session.commit.side_effect = IntegrityError("insert", {}, Exception("unique violation"))
+
+    result = await _service().check_in_person(session, event_id=uuid4(), user_id=1, now=START)
+
+    assert result == CheckInResult.ALREADY_CHECKED_IN
+    session.rollback.assert_awaited_once()
+
+
+async def test_check_in_person_reraises_other_integrity_errors():
+    accepted = Mock()
+    accepted.scalars.return_value.first.return_value = Mock(status="accepted")
+    no_row = Mock()
+    no_row.scalars.return_value.first.return_value = None
+    session = AsyncMock(spec=AsyncSession)
+    session.add = Mock()
+    session.execute.side_effect = [accepted, no_row, no_row]
+    session.commit.side_effect = IntegrityError("insert", {}, Exception("foreign key"))
+
+    with pytest.raises(IntegrityError):
+        await _service().check_in_person(session, event_id=uuid4(), user_id=1, now=START)
+
+    session.rollback.assert_awaited_once()
