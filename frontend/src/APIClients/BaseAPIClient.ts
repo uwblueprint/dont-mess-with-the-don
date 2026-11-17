@@ -1,5 +1,6 @@
 import axios, { AxiosResponse, AxiosRequestConfig } from "axios";
 import { camelizeKeys, decamelizeKeys } from "humps";
+import auth from "../firebase";
 
 const baseAPIClient = axios.create({
   baseURL: process.env.REACT_APP_BACKEND_URL,
@@ -19,6 +20,12 @@ baseAPIClient.interceptors.response.use((response: AxiosResponse) => {
 
 baseAPIClient.interceptors.request.use(async (config: AxiosRequestConfig) => {
   const newConfig = { ...config };
+
+  // getIdToken refreshes the token when it is about to expire
+  const token = await auth.currentUser?.getIdToken();
+  if (token) {
+    newConfig.headers = { ...config.headers, Authorization: `Bearer ${token}` };
+  }
 
   if (config.params) {
     newConfig.params = decamelizeKeys(config.params);
