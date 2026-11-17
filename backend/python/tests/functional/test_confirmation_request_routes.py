@@ -3,8 +3,11 @@ from datetime import datetime
 
 import pytest
 
+from app.dependencies.auth import get_current_user
 from app.dependencies.services import get_confirmation_request_service
 from app.models import get_session
+from app.models.enum import UserRole
+from app.models.user import User
 
 BASE = "/confirmation_requests/"
 USERS_BASE = "/users/"
@@ -262,3 +265,31 @@ async def test_delete_confirmation_request_returns_204(client):
 async def test_delete_nonexistent_confirmation_request_returns_404(client):
     response = await client.delete(f"{BASE}{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+ALL_CONFIRMATION_REQUEST_ROUTES = [
+    ("GET", BASE, None),
+    ("GET", f"{BASE}{uuid.uuid4()}", None),
+    ("POST", BASE, _confirmation_payload(1)),
+    ("PATCH", f"{BASE}{uuid.uuid4()}", {"email_status": "sent"}),
+    ("DELETE", f"{BASE}{uuid.uuid4()}", None),
+]
+
+
+@pytest.mark.parametrize(("method", "url", "body"), ALL_CONFIRMATION_REQUEST_ROUTES)
+async def test_confirmation_request_routes_reject_attendees(app, client, method, url, body):
+    attendee = User(id=1, email="attendee@example.com", role=UserRole.ATTENDEE)
+    app.dependency_overrides[get_current_user] = lambda: attendee
+
+    response = await client.request(method, url, json=body)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize(("method", "url", "body"), ALL_CONFIRMATION_REQUEST_ROUTES)
+async def test_confirmation_request_routes_require_login(app, client, method, url, body):
+    app.dependency_overrides.pop(get_current_user)
+
+    response = await client.request(method, url, json=body)
+
+    assert response.status_code == 401

@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_confirmation_request_service
 from app.models import get_session
 from app.models.confirmation_requests import (
@@ -16,7 +17,11 @@ from app.services.implementations.confirmation_request_service import (
     RegistrationNotFoundError,
 )
 
-router = APIRouter(prefix="/confirmation_requests", tags=["confirmation_requests"])
+router = APIRouter(
+    prefix="/confirmation_requests",
+    tags=["confirmation_requests"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.get("/", response_model=list[ConfirmationRequestRead])
