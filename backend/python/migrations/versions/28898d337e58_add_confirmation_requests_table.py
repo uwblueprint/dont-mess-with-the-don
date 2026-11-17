@@ -1,7 +1,7 @@
 """add confirmation requests table
 
 Revision ID: 28898d337e58
-Revises: 8a1f0d2c3b4e
+Revises: 71cf4c442595
 Create Date: 2026-10-07 22:19:17.697809
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "28898d337e58"
-down_revision = "8a1f0d2c3b4e"
+down_revision = "71cf4c442595"
 branch_labels = None
 depends_on = None
 
