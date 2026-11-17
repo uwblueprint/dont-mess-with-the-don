@@ -8,10 +8,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from app.config import settings
-from app.models.check_in import CheckInRegistrationStatus, CheckInWindow, CheckInWindowState
+from app.models.attendance import Attendance
+from app.models.check_in import (
+    CheckInEventRead,
+    CheckInPersonRead,
+    CheckInRegistrationStatus,
+    CheckInStatusRead,
+    CheckInWindow,
+    CheckInWindowState,
+)
 from app.models.enum import RegistrationStatusEnum
 from app.models.event import Event
 from app.models.registration import Registration
+from app.models.user import User
 
 _REGISTRATION_STATUS = {
     RegistrationStatusEnum.ACCEPTED: CheckInRegistrationStatus.ACCEPTED,
@@ -82,3 +91,43 @@ class CheckInService:
         if registration is None:
             return CheckInRegistrationStatus.NOT_REGISTERED
         return _REGISTRATION_STATUS[RegistrationStatusEnum(registration.status)]
+
+    async def get_attendance(
+        self, session: AsyncSession, user_id: int, event_id: UUID
+    ) -> Attendance | None:
+        statement = select(Attendance).where(
+            Attendance.user_id == user_id,
+            Attendance.event_instance_id == event_id,
+        )
+        result = await session.execute(statement)
+        return result.scalars().first()
+
+    async def get_check_in_status(
+        self, session: AsyncSession, event: Event, caller: User, now: datetime
+    ) -> CheckInStatusRead:
+        """The event, its check-in window, and the caller and their children."""
+        children_result = await session.execute(
+            select(User).where(User.guardian_id == caller.id).order_by(col(User.id))
+        )
+        people = []
+        for person in [caller, *children_result.scalars().all()]:
+            if person.id is None:  # only unsaved users lack an id
+                continue
+            attendance = await self.get_attendance(session, person.id, event.id)
+            people.append(
+                CheckInPersonRead(
+                    user_id=person.id,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    is_self=person.id == caller.id,
+                    registration_status=await self.get_registration_status(
+                        session, person.id, event.id
+                    ),
+                    checked_in=attendance is not None and attendance.attended_at is not None,
+                )
+            )
+        return CheckInStatusRead(
+            event=CheckInEventRead.model_validate(event, from_attributes=True),
+            window=self.get_window(event, now),
+            people=people,
+        )
