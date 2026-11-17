@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # (e.g. event check-in links)
     frontend_url: str = Field(default="http://localhost:3000")
 
+    # Event check-in opens this many minutes before an event starts, and closes when it ends
+    check_in_opens_minutes_before: int = Field(default=15)
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"

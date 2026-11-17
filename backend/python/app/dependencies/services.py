@@ -3,6 +3,7 @@ from functools import lru_cache
 
 from app.config import settings
 from app.services.implementations.attendance_service import AttendanceService
+from app.services.implementations.check_in_service import CheckInService
 from app.services.implementations.confirmation_request_service import ConfirmationRequestService
 from app.services.implementations.entity_service import EntityService
 from app.services.implementations.event_series_service import EventSeriesService
@@ -84,6 +85,13 @@ def get_attendance_service() -> AttendanceService:
     """Get attendance service instance"""
     logger = get_logger()
     return AttendanceService(logger)
+
+
+@lru_cache
+def get_check_in_service() -> CheckInService:
+    """Get check-in service instance"""
+    logger = get_logger()
+    return CheckInService(logger)
 
 
 @lru_cache
