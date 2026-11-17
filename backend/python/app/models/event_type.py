@@ -1,7 +1,7 @@
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
@@ -20,6 +20,7 @@ class EventTypeBase(SQLModel):
     max_attendees: int = Field(ge=0)
     cancellation_cutoff_hours: int = Field(default=48, ge=0)
     waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
 
@@ -59,6 +60,7 @@ class EventTypeUpdate(SQLModel):
     max_attendees: int | None = Field(default=None, ge=0)
     cancellation_cutoff_hours: int | None = Field(default=None, ge=0)
     waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict | None = Field(default=None)
 
     @field_validator("form_json")

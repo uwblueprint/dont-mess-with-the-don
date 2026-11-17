@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import ARRAY, String, UniqueConstraint
+from sqlalchemy import ARRAY, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
@@ -35,6 +35,7 @@ class EventBase(SQLModel):
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
     waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 
@@ -103,6 +104,7 @@ class EventUpdate(SQLModel):
     end_datetime: datetime | None = Field(default=None)
     post_event_photo_keys: ObjectKeys | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict | None = Field(default=None)
 
     @field_validator("form_json")
