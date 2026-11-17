@@ -22,6 +22,21 @@ from app.services.interfaces.confirmation_request_service import IConfirmationRe
 
 MIN_STRIKES_FOR_CONFIRMATION = 2
 CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT = 72
+MIN_CONFIRMATION_WINDOW_HOURS = 24
+
+
+def calculate_confirmation_deadline(event_start: datetime, signed_up_at: datetime) -> datetime:
+    """Deadline for a confirmation request.
+
+    Normally 72h before the event. Late signups get at least 24h after signing up
+    instead, so the deadline is never already passed, but it is never later than
+    the event start.
+    """
+    deadline = max(
+        event_start - timedelta(hours=CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT),
+        signed_up_at + timedelta(hours=MIN_CONFIRMATION_WINDOW_HOURS),
+    )
+    return min(deadline, event_start)
 
 
 class RegistrationNotFoundError(ValueError):
@@ -129,8 +144,11 @@ class ConfirmationRequestService(IConfirmationRequestService):
             ConfirmationRequest(
                 registration_id=registration.id,
                 email_status=ConfirmationRequestStatusEnum.PENDING,
-                deadline=event.start_datetime
-                - timedelta(hours=CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT),
+                deadline=calculate_confirmation_deadline(
+                    event_start=event.start_datetime,
+                    signed_up_at=registration.created_at
+                    or datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None),
+                ),
             )
         )
 

@@ -69,6 +69,53 @@ async def test_eligible_signup_creates_pending_confirmation_request(client):
     assert len(requests.json()) == 1
 
 
+async def test_late_eligible_signup_gets_deadline_24h_after_signup(client):
+    user_response = await client.post("/users/", json={"email": "late_signup@example.com"})
+    user_id = user_response.json()["id"]
+    now = datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None)
+
+    async def create_event(start: datetime) -> str:
+        response = await client.post(
+            "/events",
+            json={
+                "name": "Late signup confirmation test",
+                "description": "Tests confirmation deadlines for late signups",
+                "location": "Toronto",
+                "max_attendees": 10,
+                "event_status": "published",
+                "image": "https://example.com/event.jpg",
+                "start_datetime": start.isoformat(),
+                "end_datetime": (start + timedelta(hours=2)).isoformat(),
+            },
+        )
+        assert response.status_code == 201
+        return response.json()["id"]
+
+    for days_ago in (30, 15):
+        event_id = await create_event(now - timedelta(days=days_ago))
+        response = await client.post(
+            BASE,
+            json={"user_id": user_id, "event_instance_id": event_id, "status": "accepted"},
+        )
+        assert response.status_code == 201
+
+    # 48h out, so the usual 72h-before deadline would already have passed
+    event_start = now + timedelta(hours=48)
+    upcoming_event_id = await create_event(event_start)
+    signup = await client.post(
+        BASE,
+        json={"user_id": user_id, "event_instance_id": upcoming_event_id, "status": "accepted"},
+    )
+    assert signup.status_code == 201
+    signed_up_at = datetime.fromisoformat(signup.json()["created_at"])
+
+    requests = await client.get("/confirmation_requests/", params={"event_id": upcoming_event_id})
+    assert len(requests.json()) == 1
+    deadline = datetime.fromisoformat(requests.json()[0]["deadline"])
+    assert deadline == signed_up_at + timedelta(hours=24)
+    assert signed_up_at < deadline <= event_start
+
+
 async def test_create_registration_returns_201(client):
     # Create a user to get a valid user_id
     user_response = await client.post("/users/", json={"email": "volunteer@example.com"})
