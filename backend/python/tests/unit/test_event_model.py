@@ -11,7 +11,7 @@ def _event_fields() -> dict:
         "location": "Toronto",
         "max_attendees": 25,
         "event_status": "published",
-        "image": "https://example.com/headline.jpg",
+        "headline_image_key": "event-images/headline.jpg",
         "start_datetime": datetime(2026, 7, 15, 10, 0, 0),
         "end_datetime": datetime(2026, 7, 15, 12, 0, 0),
     }

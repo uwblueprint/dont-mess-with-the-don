@@ -10,6 +10,7 @@ from app.config import settings
 from app.models.enum import EventRegistrationTypeEnum
 from app.models.event import Event
 from app.models.event_series import EventSeries
+from app.models.waiver_template import WaiverTemplate
 from app.services.jobs.event_generation_jobs import generate_recurring_events
 
 
@@ -36,7 +37,7 @@ def make_series(**overrides) -> EventSeries:
         "max_attendees": 20,
         "max_waitlist": 5,
         "event_status": "published",
-        "image": "https://example.com/cleanup.jpg",
+        "headline_image_key": "event-images/event.jpg",
         "start_time": time(9),
         "end_time": time(11),
         "registration_type": EventRegistrationTypeEnum.AUTO_APPROVE,
@@ -82,3 +83,33 @@ async def test_ignores_inactive_series(job_session_maker):
 
     async with job_session_maker() as session:
         assert list((await session.execute(select(Event))).scalars()) == []
+
+
+async def test_events_copy_the_series_waiver_when_generated(job_session_maker, monkeypatch):
+    monkeypatch.setattr(settings, "event_generation_horizon_days", 1)
+    old_waiver = WaiverTemplate(document_key="waiver-templates/v1.pdf")
+    new_waiver = WaiverTemplate(document_key="waiver-templates/v2.pdf")
+    series = make_series(waiver_template_id=old_waiver.id)
+    async with job_session_maker() as session:
+        session.add_all([old_waiver, new_waiver, series])
+        await session.commit()
+
+    assert await generate_recurring_events(datetime(2026, 1, 2, 9)) == 2
+
+    # Changing the series default only affects events generated afterwards
+    async with job_session_maker() as session:
+        stored = await session.get(EventSeries, series.id)
+        assert stored is not None
+        stored.waiver_template_id = new_waiver.id
+        await session.commit()
+    assert await generate_recurring_events(datetime(2026, 1, 3, 9)) == 1
+
+    async with job_session_maker() as session:
+        events = list(
+            (await session.execute(select(Event).order_by(Event.start_datetime))).scalars()
+        )
+    assert [event.waiver_template_id for event in events] == [
+        old_waiver.id,
+        old_waiver.id,
+        new_waiver.id,
+    ]

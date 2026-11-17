@@ -8,6 +8,7 @@ from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
 from .enum import EventRegistrationTypeEnum
+from .object_key import ObjectKey
 
 # Rules the recurring-event job can expand safely (see validate_recurrence)
 ALLOWED_FREQUENCIES = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
@@ -30,10 +31,10 @@ class EventSeriesBase(SQLModel):
     max_waitlist: int = Field(ge=0)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_status: str = Field(min_length=1, max_length=255)
-    image: str = Field(min_length=1)
+    headline_image_key: ObjectKey = Field(min_length=1)
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
     start_time: time
     end_time: time
-    image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     registration_type: EventRegistrationTypeEnum = Field(
         sa_column=Column(
@@ -111,10 +112,10 @@ class EventSeriesUpdate(SQLModel):
     max_waitlist: int | None = Field(default=None, ge=0)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
-    image: str | None = Field(default=None, min_length=1)
+    headline_image_key: ObjectKey | None = Field(default=None, min_length=1)
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
     start_time: time | None = Field(default=None)
     end_time: time | None = Field(default=None)
-    image_urls: list[str] | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
     registration_type: EventRegistrationTypeEnum | None = Field(default=None)
 
