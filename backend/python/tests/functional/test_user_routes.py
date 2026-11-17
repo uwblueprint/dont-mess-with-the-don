@@ -1,3 +1,7 @@
+from sqlalchemy.exc import IntegrityError
+
+from app.dependencies.services import get_user_service
+
 BASE = "/users/"
 
 
@@ -75,6 +79,17 @@ async def test_delete_user_returns_204(client):
 async def test_delete_nonexistent_user_returns_404(client):
     response = await client.delete(f"{BASE}99999")
     assert response.status_code == 404
+
+
+async def test_delete_user_with_signed_waivers_returns_409(app, client):
+    # waiver_signed.user_id / signed_by_user_id are ON DELETE RESTRICT
+    class RestrictedUserService:
+        async def delete_user(self, session, user_id):
+            raise IntegrityError("DELETE", {}, Exception("fk"))
+
+    app.dependency_overrides[get_user_service] = lambda: RestrictedUserService()
+    response = await client.delete(f"{BASE}1")
+    assert response.status_code == 409
 
 
 async def test_get_user_children_returns_200(client):

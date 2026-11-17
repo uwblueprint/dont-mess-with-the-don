@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import require_admin
@@ -115,6 +116,12 @@ async def delete_user(
 ) -> None:
     try:
         success = await user_service.delete_user(session, user_id)
+    except IntegrityError as e:
+        # e.g. signed waivers (legal records) or registrations still point at this user
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User has records that must be kept",
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
