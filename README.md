@@ -245,14 +245,22 @@ Reusable forms that aren't tied to one event, such as a post-event feedback form
 
 ## Object storage (Cloudflare R2)
 
-File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R2StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). It has two async methods, `await upload_file(...)` and `await delete_file(...)`. Config is read from the root `.env` through `app/config.py`:
+File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R2StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). Config is read from the root `.env` through `app/config.py`:
 
 | Variable | Required | Notes |
 |---|---|---|
 | `R2_ENDPOINT_URL` | yes | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
-| `R2_BUCKET_NAME` | yes | Use a different bucket per environment (e.g. dev vs prod) |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token|
+| `R2_PUBLIC_BUCKET_NAME` | yes | `dmwtd-public-{env}`. Public access enabled on this bucket only |
+| `R2_PRIVATE_BUCKET_NAME` | yes | `dmwtd-private-{env}`. Never public |
+| `R2_PUBLIC_BASE_URL` | yes | Public URL of the public bucket (r2.dev subdomain or custom domain) |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token with access to both buckets |
 | `R2_KEY_PREFIX` | no | e.g. `dev/` or `prod/` if environments share a bucket |
+| `SIGNED_URL_TTL_MEDIA_SECONDS` | no | Default `3600` (profile pics, post-event photos) |
+| `SIGNED_URL_TTL_WAIVER_SIGNED_SECONDS` | no | Default `300` (completed/signed waivers) |
+
+The R2 settings are required in production, where missing ones fail the deploy. In development and testing you can leave all of them unset: the app then uses `UnconfiguredStorageService`, which returns placeholder URLs (`https://r2-not-configured.invalid/...`) and raises on upload or delete. Setting only some of them is an error in every environment.
+
+R2 enables public access per bucket, so each environment has two buckets: a public one for objects anyone may fetch and a private one reachable only through short-lived signed URLs. `url_for(key, visibility)` builds either: a permanent public URL, or a signed URL (signing is local, no network call). `upload_file` and `delete_file` take a `BucketVisibility` to pick the bucket. Keys are UUID-based (`events/{event_id}/{uuid}.jpg`, from `build_key`), never the uploaded filename, and the environment's key prefix is applied by the service, so the same key works in every environment.
 
 ## Frontend URL
 
