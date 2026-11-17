@@ -4,6 +4,7 @@ import logging
 import pytest
 
 from app.services.implementations.scheduler_service import SchedulerService
+from app.services.jobs import init_jobs
 
 
 def _make_service() -> SchedulerService:
@@ -88,5 +89,15 @@ async def test_async_job_wrapper_runs() -> None:
         # Invoke the wrapped sync callable directly (no wall-clock wait)
         await registered.func()
         assert seen["loop"] is app_loop
+    finally:
+        svc.stop()
+
+
+async def test_init_jobs_registers_recurring_event_generator() -> None:
+    svc = _make_service()
+    svc.start()
+    try:
+        init_jobs(svc)
+        assert any(job["id"] == "generate_recurring_events" for job in svc.list_jobs())
     finally:
         svc.stop()
