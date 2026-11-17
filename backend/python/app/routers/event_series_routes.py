@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies.auth import require_admin
 from app.dependencies.services import get_event_series_service
 from app.models import get_session
 from app.models.event_series import EventSeriesCreate, EventSeriesRead, EventSeriesUpdate
@@ -47,7 +48,12 @@ async def get_event_series(
     return EventSeriesRead.model_validate(event_series)
 
 
-@router.post("/", response_model=EventSeriesRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=EventSeriesRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 async def create_event_series(
     event_series: EventSeriesCreate,
     session: AsyncSession = Depends(get_session),
@@ -63,7 +69,9 @@ async def create_event_series(
         ) from e
 
 
-@router.patch("/{event_series_id}", response_model=EventSeriesRead)
+@router.patch(
+    "/{event_series_id}", response_model=EventSeriesRead, dependencies=[Depends(require_admin)]
+)
 async def update_event_series(
     event_series_id: UUID,
     event_series: EventSeriesUpdate,
@@ -87,7 +95,11 @@ async def update_event_series(
     return EventSeriesRead.model_validate(updated_event_series)
 
 
-@router.delete("/{event_series_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_series_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_event_series(
     event_series_id: UUID,
     session: AsyncSession = Depends(get_session),

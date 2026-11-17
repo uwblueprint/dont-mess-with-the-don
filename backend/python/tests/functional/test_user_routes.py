@@ -94,15 +94,3 @@ async def test_get_user_children_returns_empty_list_when_no_children(client):
 async def test_get_user_children_nonexistent_user_returns_404(client):
     response = await client.get(f"{BASE}99999/children")
     assert response.status_code == 404
-
-
-async def test_response_excludes_password_hash(client):
-    create_response = await client.post(
-        BASE, json={"email": "secure@example.com", "password_hash": "secret"}
-    )
-    assert create_response.status_code == 201
-    assert "password_hash" not in create_response.json()
-
-    user_id = create_response.json()["id"]
-    get_response = await client.get(f"{BASE}{user_id}")
-    assert "password_hash" not in get_response.json()

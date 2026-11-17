@@ -1,11 +1,21 @@
+import secrets
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from pydantic import field_validator
 from sqlalchemy import ARRAY, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
+from .form import validate_form_json
+
+CHECK_IN_TOKEN_MAX_LENGTH = 64
+
+
+def generate_check_in_token() -> str:
+    """Random URL-safe token (32 bytes of entropy, 43 characters)."""
+    return secrets.token_urlsafe(32)
 
 
 class EventBase(SQLModel):
@@ -33,12 +43,22 @@ class Event(EventBase, BaseModel, table=True):
     __tablename__ = "events"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    # Secret encoded in the event's check-in QR code. Kept off the API models
+    # so it is only exposed deliberately.
+    check_in_token: str = Field(
+        default_factory=generate_check_in_token,
+        unique=True,
+        max_length=CHECK_IN_TOKEN_MAX_LENGTH,
+    )
 
 
 class EventCreate(EventBase):
     """Event creation request"""
 
-    pass
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)
 
 
 class EventRead(EventBase):
@@ -47,6 +67,12 @@ class EventRead(EventBase):
     id: UUID
     created_at: datetime | None
     updated_at: datetime | None
+
+
+class EventCheckInLink(SQLModel):
+    """Check-in link for an event, encoded in its check-in QR code"""
+
+    url: str
 
 
 class EventUpdate(SQLModel):
@@ -66,3 +92,8 @@ class EventUpdate(SQLModel):
     notes: list[str] | None = Field(default=None)
     notification_body: str | None = Field(default=None)
     form_json: dict | None = Field(default=None)
+
+    @field_validator("form_json")
+    @classmethod
+    def _validate_form_json(cls, value: dict | None) -> dict | None:
+        return validate_form_json(value)

@@ -4,6 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.dependencies.services import get_scheduler_service
+from app.services.jobs import init_jobs
+
 from .config import settings
 from .models import init_app as init_models
 from .routers import init_app as init_routers
@@ -13,7 +16,17 @@ from .routers import init_app as init_routers
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan management"""
     init_models()
-    yield
+
+    # Initialize scheduler
+    scheduler_service = get_scheduler_service()
+    scheduler_service.start()
+
+    try:
+        init_jobs(scheduler_service)
+        yield
+    finally:
+        # Shutdown scheduler
+        scheduler_service.stop()
 
 
 def create_app() -> FastAPI:

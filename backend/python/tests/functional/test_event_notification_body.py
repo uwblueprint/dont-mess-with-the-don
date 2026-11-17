@@ -174,9 +174,7 @@ async def test_whitespace_update_does_not_hide_previous_message(client):
     assert older.status_code == 201
     assert newer.status_code == 201
 
-    updated = await client.patch(
-        f"{BASE}/{newer.json()['id']}", json={"notification_body": "\n\t"}
-    )
+    updated = await client.patch(f"{BASE}/{newer.json()['id']}", json={"notification_body": "\n\t"})
     assert updated.status_code == 200
     assert updated.json()["notification_body"] is None
 

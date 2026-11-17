@@ -1,7 +1,7 @@
 """add notification_body to events and event_types
 
 Revision ID: a1c4e8b90d22
-Revises: 2eceb5b619b4
+Revises: 71cf4c442595
 Create Date: 2026-10-07
 
 """
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "a1c4e8b90d22"
-down_revision = "2eceb5b619b4"
+down_revision = "71cf4c442595"
 branch_labels = None
 depends_on = None
 

@@ -22,7 +22,7 @@ Notes on the CSV format:
   * Blank cells are treated as "not provided" and fall back to the model default
     (usually ``NULL``), so you can leave optional columns empty.
   * JSON and array columns (e.g. ``form_json``, ``image_urls``) must contain
-    valid JSON, e.g. ``{"waiver_required": true}`` or ``["a", "b"]``. Standard
+    valid JSON, e.g. ``{"formId": "frm_beach_cleanup"}`` or ``["a", "b"]``. Standard
     CSV quoting applies, so wrap those cells in double quotes and double any
     internal quotes.
   * Rows are inserted in file order, so within a self-referencing table (users)

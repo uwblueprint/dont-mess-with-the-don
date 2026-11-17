@@ -22,7 +22,7 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
-- Node.js 18+ (install directly from [nodejs.org](https://nodejs.org/) or via [nvm](https://github.com/nvm-sh/nvm))
+- Node.js 24+ (install directly from [nodejs.org](https://nodejs.org/) or via [nvm](https://github.com/nvm-sh/nvm))
 
 ### Initial Setup
 
@@ -30,6 +30,15 @@ This project is built by [UW Blueprint](https://uwblueprint.org) to address this
 2. Set up environment files:
 
    **Ask PL** To share `.env` (root) and `frontend/.env` and place them in the repo root and `frontend/` respectively.
+
+   Optional `frontend/.env` variables for the map POC (`/mapPOC`):
+
+   | Variable | Purpose |
+   | --- | --- |
+   | `REACT_APP_GOOGLE_MAPS_API_KEY` | Google Maps JavaScript API key. Without it, the Google tab renders in watermarked development mode. |
+   | `REACT_APP_GOOGLE_MAPS_MAP_ID` | Google Cloud map ID for advanced markers and cloud styling. Defaults to Google's `DEMO_MAP_ID`. |
+
+   The Leaflet and MapLibre tabs need no keys. Restart the frontend after editing `.env`.
 
 3. Start all services:
 ```bash
@@ -92,9 +101,13 @@ the database already has data, so it is safe to leave enabled across restarts.
 - Rows are inserted in file order, so list parents before children in
   `users.csv` (the `guardian_id` self-reference).
 - JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
-  contain valid JSON, e.g. `{"waiver_required": true}` or `["a", "b"]`. Wrap
-  those cells in double quotes and double any internal quotes (standard CSV
-  quoting).
+  contain valid JSON, e.g. `{"formId": "frm_beach_cleanup"}` or `["a", "b"]`.
+  Wrap those cells in double quotes and double any internal quotes (standard
+  CSV quoting).
+- `form_json` and `response_json` must follow the registration form schema: a
+  response's `formId`, `formVersion` and answers have to match the form of the
+  event it points to (the event's own `form_json`, or its event type's when
+  that is blank).
 
 ### Useful Commands
 
@@ -126,6 +139,144 @@ docker exec don-backend mypy .
 # Run Python tests
 docker exec -it don-backend pytest
 ```
+
+## Registration Forms
+
+Events can have a registration form. The form definition is stored as JSON on `event_types.form_json` (the template for an event type) and can be overridden per event on `events.form_json`. A user's answers are stored as JSON on `form_submissions.response_json`. Both formats are defined by the Pydantic schemas in `backend/python/app/models/form.py` and validated whenever an event, event type or form submission is created or updated through the API. When a form submission is created or its response is updated, the response is also checked against the event's form (the event's own `form_json`, falling back to its event type's) with `validate_form_response` in `backend/python/app/utilities/form_validation.py`; a response that does not match returns a 422.
+
+`None` or `{}` means "no form" / "no response". Unknown keys are rejected everywhere.
+
+### Form JSON definition
+
+A form is an ordered list of **questions**; they render in list order. Questions are referenced by `id`, never by their label, so two questions may share a label.
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "version": 1,
+  "title": "Workshop Registration",
+  "questions": [
+    { "id": "q_name", "type": "short_answer", "label": "Name", "required": true },
+    { "id": "q_email", "type": "email", "label": "Email", "required": true },
+    { "id": "q_why", "type": "paragraph", "label": "Why are you joining?" },
+    {
+      "id": "q_dietary",
+      "type": "multiple_choice",
+      "label": "Dietary restrictions",
+      "required": true,
+      "options": [
+        { "id": "opt_none", "label": "None" },
+        { "id": "opt_veg", "label": "Vegetarian" }
+      ]
+    },
+    {
+      "id": "q_food",
+      "type": "checkboxes",
+      "label": "What food do you want during the event",
+      "options": [
+        { "id": "opt_pizza", "label": "pizza" },
+        { "id": "opt_cookies", "label": "cookies" }
+      ]
+    },
+    { "id": "q_birthday", "type": "date", "label": "Birthday" },
+    { "id": "q_arrival", "type": "time", "label": "Arrival time" }
+  ]
+}
+```
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `formId` | yes | Non-empty string identifying the form |
+| `version` | no (default `1`) | Integer ≥ 1; bump it when the questions change |
+| `title` | yes | Display title |
+| `questions` | yes | At least one question; `id`s must be unique within the form |
+| `questions[].id` | yes | Stable key used in `answers` |
+| `questions[].type` | yes | One of the types below |
+| `questions[].label` | yes | Display text |
+| `questions[].required` | no (default `false`) | |
+| `questions[].options` | choice types only | List of `{ "id", "label" }`; option `id`s must be unique within the question |
+
+| Type | UI input | Answer format |
+| --- | --- | --- |
+| `short_answer` | single-line text | string |
+| `paragraph` | multi-line text | string |
+| `email` | email input | string matching a basic email pattern |
+| `date` | date picker | `"YYYY-MM-DD"` |
+| `time` | time picker | `"HH:MM"` (24-hour) |
+| `multiple_choice` | radio buttons | one option `id` (string) |
+| `checkboxes` | checkboxes | list of option `id`s, no duplicates |
+
+### Form JSON response
+
+```json
+{
+  "formId": "frm_workshop_signup",
+  "formVersion": 1,
+  "answers": {
+    "q_name": "Ben Ng",
+    "q_email": "ben@example.com",
+    "q_dietary": "opt_veg",
+    "q_food": ["opt_pizza", "opt_cookies"],
+    "q_birthday": "2000-11-29",
+    "q_arrival": ""
+  },
+  "responseVersion": 1
+}
+```
+
+`answers` maps question `id` to its answer. An unanswered question may be omitted or given as `""` / `[]`; a whitespace-only string also counts as unanswered. `responseVersion` defaults to `1`.
+
+To be accepted for an event that has a form, a response must use the form's `formId` and `version`, answer only questions that exist in the form, answer every required question, and match each question's answer format. An empty response is rejected. Events without a form are not checked beyond the response's shape.
+
+### Design decisions
+
+- **Questions are identified by `id`, not `key`.** The `id` is the stable key used in `answers`; it never changes when a label is edited.
+- **Options are `{ "id", "label" }`, not `{ "value", "label" }`.** Answers store option `id`s, so an option's label can be reworded without invalidating existing responses.
+- **Order is list position.** Questions and options render in the order they appear in their lists; there is no `order` field to keep in sync.
+- **No sections.** A form is a flat list of questions. `sections`, `goToSection` and a response `path` are rejected as unknown keys.
+
+### Feedback forms
+
+Reusable forms that aren't tied to one event, such as a post-event feedback form, live in the `forms` table (`id` + `form_json`, same format as above) and are managed through `/forms`.
+
+- A submission to one of these forms sets `form_id` on the form submission. Its response is checked against that form instead of the event's registration form. Submissions without a `form_id` are registration responses, as before.
+- `GET /events/{event_id}/feedback` returns every submission for that event that has a `form_id`. `GET /form_submissions/?form_id=...` filters by form.
+- A form can't be deleted while submissions still use it (409).
+
+## Object storage (Cloudflare R2)
+
+File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R2StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). It has two async methods, `await upload_file(...)` and `await delete_file(...)`. Config is read from the root `.env` through `app/config.py`:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `R2_ENDPOINT_URL` | yes | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `R2_BUCKET_NAME` | yes | Use a different bucket per environment (e.g. dev vs prod) |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token|
+| `R2_KEY_PREFIX` | no | e.g. `dev/` or `prod/` if environments share a bucket |
+
+## Frontend URL
+
+The backend builds some links that point at the frontend (for example event check-in links). It reads the frontend's base URL from `FRONTEND_URL` in the root `.env`, defaulting to `http://localhost:3000`. Set it in every deployed environment, e.g. `FRONTEND_URL=https://<frontend domain>`.
+
+## Auth
+
+Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The frontend signs people in with the Firebase SDK (`frontend/src/firebase.ts`) and sends their Firebase ID token on every request as `Authorization: Bearer <token>`. The backend checks it in `backend/python/app/dependencies/auth.py` and only needs `FIREBASE_PROJECT_ID` in the root `.env` (no service-account key).
+
+- Right after signing up with Firebase, the frontend calls `POST /auth/register` once to create the profile. People under 16 are rejected (a guardian registers them), and an email or phone number already on a profile gets a 409. `GET /users/me` returns the profile, including `role` (`attendee` or `admin`).
+- 401 means the token is missing or invalid. 403 means the account has no profile yet, or isn't allowed to do that.
+- Browsing events, event types and event series is public. Anyone logged in can register themselves or their children for an event and submit forms for them. Everything else is admin-only.
+- Nobody can make themselves an admin through the API. To make your local account one:
+  `docker exec -it don-db psql -U postgres -d dmwtd -c "UPDATE users SET role='admin' WHERE email='you@example.com';"`
+- To call protected routes from Swagger (`/docs`):
+  1. Get an ID token (the API key is `REACT_APP_FIREBASE_API_KEY` from `frontend/.env`). The first time, `accounts:signUp` creates your test account; after that, use `accounts:signInWithPassword` with the same body.
+     ```bash
+     curl -s "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=<API_KEY>" \
+       -H "Content-Type: application/json" \
+       -d '{"email": "you@example.com", "password": "...", "returnSecureToken": true}'
+     ```
+  2. Copy the `idToken` from the response (it lasts an hour) and paste it into **Authorize** in Swagger.
+  3. The first time, call `POST /auth/register`, then make yourself an admin with the command above.
+- Tests are logged in as a fake admin by default (`tests/functional/conftest.py`); `tests/functional/test_auth_routes.py` shows how to test as someone else.
 
 ## Version Control Guide
 

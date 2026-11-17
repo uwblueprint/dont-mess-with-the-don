@@ -1,14 +1,19 @@
 from datetime import date, datetime, time
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.services import get_event_service
+from app.config import settings
+from app.dependencies.auth import require_admin
+from app.dependencies.services import get_event_service, get_form_submission_service
 from app.models import get_session
-from app.models.event import EventCreate, EventRead, EventUpdate
+from app.models.event import EventCheckInLink, EventCreate, EventRead, EventUpdate
+from app.models.form_submission import FormSubmissionRead
 from app.services.implementations.event_service import EventService
+from app.services.implementations.form_submission_service import FormSubmissionService
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -46,7 +51,12 @@ async def get_events(
         ) from e
 
 
-@router.post("", response_model=EventRead, status_code=http_status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=EventRead,
+    status_code=http_status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
 async def create_event(
     event: EventCreate,
     session: AsyncSession = Depends(get_session),
@@ -78,7 +88,53 @@ async def get_event(
     return EventRead.model_validate(event)
 
 
-@router.patch("/{event_id}", response_model=EventRead)
+@router.get(
+    "/{event_id}/feedback",
+    response_model=list[FormSubmissionRead],
+    dependencies=[Depends(require_admin)],
+)
+async def get_event_feedback(
+    event_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    form_submission_service: FormSubmissionService = Depends(get_form_submission_service),
+) -> list[FormSubmissionRead]:
+    """Get all feedback submitted for an event"""
+    try:
+        feedback = await form_submission_service.get_event_feedback(session, event_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        ) from e
+    if feedback is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found",
+        )
+    return [FormSubmissionRead.model_validate(submission) for submission in feedback]
+
+
+@router.get(
+    "/{event_id}/check-in-link",
+    response_model=EventCheckInLink,
+    dependencies=[Depends(require_admin)],
+)
+async def get_event_check_in_link(
+    event_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    event_service: EventService = Depends(get_event_service),
+) -> EventCheckInLink:
+    """Get the frontend check-in link for an event (the URL its QR code encodes)"""
+    event = await event_service.get_event(session, event_id)
+    if not event:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"Event with id {event_id} not found",
+        )
+    query = urlencode({"event": str(event.id), "token": event.check_in_token})
+    return EventCheckInLink(url=f"{settings.frontend_url.rstrip('/')}/check-in?{query}")
+
+
+@router.patch("/{event_id}", response_model=EventRead, dependencies=[Depends(require_admin)])
 async def update_event(
     event_id: UUID,
     event: EventUpdate,
@@ -95,7 +151,11 @@ async def update_event(
     return EventRead.model_validate(updated_event)
 
 
-@router.delete("/{event_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{event_id}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_event(
     event_id: UUID,
     session: AsyncSession = Depends(get_session),

@@ -12,6 +12,11 @@ class UserProvider(str, Enum):
     GOOGLE = "google"
 
 
+class UserRole(str, Enum):
+    ATTENDEE = "attendee"
+    ADMIN = "admin"
+
+
 class EntityEnum(str, Enum):
     A = "A"
     B = "B"
@@ -37,3 +42,13 @@ class EventRegistrationTypeEnum(str, Enum):
     AUTO_APPROVE = "auto_approve"
     MANUAL_APPROVE = "manual_approve"
     DROPIN = "dropin"
+
+
+class QuestionTypeEnum(str, Enum):
+    SHORT_ANSWER = "short_answer"
+    PARAGRAPH = "paragraph"
+    MULTIPLE_CHOICE = "multiple_choice"
+    CHECKBOXES = "checkboxes"
+    DATE = "date"
+    TIME = "time"
+    EMAIL = "email"

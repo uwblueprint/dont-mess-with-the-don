@@ -1,4 +1,4 @@
 id,user_id,event_instance_id,response_json
-1,1,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""tshirt_size"": ""M""}"
-2,2,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""tshirt_size"": ""L""}"
-3,4,bbbbbbbb-bbbb-bbbb-bbbb-000000000004,"{""dietary_restrictions"": ""none""}"
+1,1,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""formId"": ""frm_beach_cleanup"", ""formVersion"": 1, ""answers"": {""q_tshirt_size"": ""opt_m"", ""q_emergency_contact"": ""Minh Nguyen, 416-555-0111""}, ""responseVersion"": 1}"
+2,2,bbbbbbbb-bbbb-bbbb-bbbb-000000000003,"{""formId"": ""frm_beach_cleanup"", ""formVersion"": 1, ""answers"": {""q_tshirt_size"": ""opt_l"", ""q_emergency_contact"": ""Priya Singh, 416-555-0112"", ""q_accessibility"": ""I would prefer a spot close to the parking lot.""}, ""responseVersion"": 1}"
+3,4,bbbbbbbb-bbbb-bbbb-bbbb-000000000004,"{""formId"": ""frm_educational_workshop"", ""formVersion"": 1, ""answers"": {""q_dietary"": ""opt_none"", ""q_contact_email"": ""david@example.com""}, ""responseVersion"": 1}"

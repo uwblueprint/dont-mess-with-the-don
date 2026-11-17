@@ -3,10 +3,21 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from app.config import settings
+from app.dependencies.auth import get_current_user
 from app.dependencies.services import get_event_service
-from app.models.event import EventCreate, EventRead, EventUpdate
+from app.models.enum import UserRole
+from app.models.event import Event, EventCreate, EventRead, EventUpdate
+from app.models.user import User
 
 BASE = "/events"
+
+VALID_FORM = {
+    "formId": "frm_river_cleanup",
+    "version": 1,
+    "title": "River Cleanup Registration",
+    "questions": [{"id": "q_name", "type": "short_answer", "label": "Name", "required": True}],
+}
 
 
 def make_event(**overrides):
@@ -25,7 +36,7 @@ def make_event(**overrides):
         "updated_at": None,
         "image_urls": ["https://example.com/upload.jpg"],
         "notes": ["Bring gloves"],
-        "form_json": {"fields": []},
+        "form_json": VALID_FORM,
     }
     data.update(overrides)
     return EventRead(**data)
@@ -150,6 +161,26 @@ async def test_create_event_returns_201(client, event_service):
     assert event_service.create_event_calls[0].name == "Tree Planting"
 
 
+async def test_create_event_invalid_form_json_returns_422(client, event_service):
+    payload = event_request_payload(form_json={"fields": []})
+
+    response = await client.post(BASE, json=payload)
+
+    assert response.status_code == 422
+    assert event_service.create_event_calls == []
+
+
+async def test_update_event_invalid_form_json_returns_422(client, event_service):
+    invalid_form = {
+        **VALID_FORM,
+        "questions": [{"id": "q_pick", "type": "multiple_choice", "label": "Pick"}],
+    }
+
+    response = await client.patch(f"{BASE}/{uuid4()}", json={"form_json": invalid_form})
+
+    assert response.status_code == 422
+
+
 async def test_get_event_by_id_returns_200(client, event_service):
     event_id = uuid4()
 
@@ -215,3 +246,81 @@ async def test_delete_nonexistent_event_returns_404(client, event_service):
     response = await client.delete(f"{BASE}/{uuid4()}")
 
     assert response.status_code == 404
+
+
+def make_event_with_token(check_in_token: str) -> Event:
+    return Event(**make_event().model_dump(), check_in_token=check_in_token)
+
+
+async def test_get_check_in_link_returns_frontend_url(client, event_service, monkeypatch):
+    monkeypatch.setattr(settings, "frontend_url", "https://dmwtd.example.com")
+    event = make_event_with_token("tok_abc-123")
+    event_service.get_event_result = event
+
+    response = await client.get(f"{BASE}/{event.id}/check-in-link")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "url": f"https://dmwtd.example.com/check-in?event={event.id}&token=tok_abc-123"
+    }
+    assert event_service.get_event_calls == [event.id]
+
+
+async def test_get_check_in_link_handles_trailing_slash_in_frontend_url(
+    client, event_service, monkeypatch
+):
+    monkeypatch.setattr(settings, "frontend_url", "https://dmwtd.example.com/")
+    event = make_event_with_token("tok")
+    event_service.get_event_result = event
+
+    response = await client.get(f"{BASE}/{event.id}/check-in-link")
+
+    assert response.json()["url"].startswith("https://dmwtd.example.com/check-in?")
+
+
+async def test_get_check_in_link_nonexistent_event_returns_404(client, event_service):
+    event_service.get_event_result = None
+
+    response = await client.get(f"{BASE}/{uuid4()}/check-in-link")
+
+    assert response.status_code == 404
+
+
+async def test_get_check_in_link_requires_admin(app, client, event_service):
+    attendee = User(id=1, email="sam@example.com", role=UserRole.ATTENDEE)
+    app.dependency_overrides[get_current_user] = lambda: attendee
+
+    response = await client.get(f"{BASE}/{uuid4()}/check-in-link")
+
+    assert response.status_code == 403
+    assert event_service.get_event_calls == []
+
+
+async def test_get_check_in_link_requires_login(app, client, event_service):
+    app.dependency_overrides.pop(get_current_user)
+
+    response = await client.get(f"{BASE}/{uuid4()}/check-in-link")
+
+    assert response.status_code == 401
+    assert event_service.get_event_calls == []
+
+
+async def test_get_events_does_not_expose_check_in_token(client, event_service):
+    event_service.events = [make_event_with_token("secret-token-list")]
+
+    response = await client.get(BASE)
+
+    assert response.status_code == 200
+    assert "check_in_token" not in response.json()[0]
+    assert "secret-token-list" not in response.text
+
+
+async def test_get_event_by_id_does_not_expose_check_in_token(client, event_service):
+    event = make_event_with_token("secret-token-detail")
+    event_service.get_event_result = event
+
+    response = await client.get(f"{BASE}/{event.id}")
+
+    assert response.status_code == 200
+    assert "check_in_token" not in response.json()
+    assert "secret-token-detail" not in response.text
