@@ -37,6 +37,13 @@ class RegistrationStatusEnum(str, Enum):
     WAITLIST = "waitlist"
 
 
+class ConfirmationRequestStatusEnum(str, Enum):
+    PENDING = "pending"
+    FAILED = "failed"
+    SENT = "sent"
+    CONFIRMED = "confirmed"
+
+
 class EventRegistrationTypeEnum(str, Enum):
     LOTTERY = "lottery"
     AUTO_APPROVE = "auto_approve"
@@ -52,3 +59,8 @@ class QuestionTypeEnum(str, Enum):
     DATE = "date"
     TIME = "time"
     EMAIL = "email"
+
+
+class BucketVisibility(str, Enum):
+    PUBLIC = "public"
+    PRIVATE = "private"

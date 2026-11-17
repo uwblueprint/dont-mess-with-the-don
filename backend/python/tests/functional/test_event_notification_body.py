@@ -16,7 +16,7 @@ EVENT_TYPES = "/event-types/"
 
 TYPE_PAYLOAD = {
     "name": "Shoreline Cleanup",
-    "image": "https://example.com/cleanup.png",
+    "headline_image_key": "event-images/cleanup.png",
     "description": "Pick up trash along the river.",
     "location": "Toronto",
     "max_attendees": 20,
@@ -31,10 +31,10 @@ def event_payload(event_type_id, **overrides):
         "max_attendees": 25,
         "event_status": "published",
         "event_type_id": event_type_id,
-        "image": "https://example.com/headline.jpg",
+        "headline_image_key": "event-images/headline.jpg",
         "start_datetime": datetime(2026, 7, 15, 10, 0, 0).isoformat(),
         "end_datetime": datetime(2026, 7, 15, 12, 0, 0).isoformat(),
-        "image_urls": [],
+        "post_event_photo_keys": [],
         "notes": [],
     }
     data.update(overrides)
@@ -192,7 +192,7 @@ def _event_row(event_type_id: UUID, event_id: UUID, body: str, created_at: datet
         max_attendees=10,
         event_status="published",
         event_type_id=event_type_id,
-        image="https://example.com/headline.jpg",
+        headline_image_key="event-images/headline.jpg",
         start_datetime=datetime(2026, 7, 15, 10, 0, 0),
         end_datetime=datetime(2026, 7, 15, 12, 0, 0),
         notification_body=body,
@@ -215,7 +215,7 @@ async def db_session():
 async def test_same_timestamp_uses_higher_id_as_tie_break(db_session):
     event_type = EventType(
         name="Tie Break",
-        image="https://example.com/tie.png",
+        headline_image_key="event-images/tie.png",
         description="Which message wins a tie.",
         location="Toronto",
         max_attendees=5,
@@ -241,7 +241,7 @@ async def test_same_timestamp_uses_higher_id_as_tie_break(db_session):
             max_attendees=5,
             event_status="published",
             event_type_id=event_type.id,
-            image="https://example.com/headline.jpg",
+            headline_image_key="event-images/headline.jpg",
             start_datetime=datetime(2026, 8, 1, 10, 0, 0),
             end_datetime=datetime(2026, 8, 1, 12, 0, 0),
         ),

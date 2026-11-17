@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import get_current_user, get_token_claims
-from app.dependencies.services import get_user_service
+from app.dependencies.services import get_storage_service, get_user_service
 from app.models import get_session
 from app.models.user import User, UserRead, UserRegister, UserSelfUpdate, UserUpdate
+from app.serializers.user import user_read
 from app.services.implementations.user_service import UserService
+from app.services.interfaces.storage_service import IStorageService
 
 # Must be included before user_routes, or GET /users/me matches /users/{user_id}
 router = APIRouter(tags=["auth"])
@@ -19,6 +21,7 @@ async def register(
     claims: dict[str, Any] = Depends(get_token_claims),
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> UserRead:
     """Create the logged-in Firebase account's profile, once, right after sign-up"""
     email = claims.get("email")
@@ -29,7 +32,7 @@ async def register(
         )
     try:
         created_user = await user_service.register_user(session, claims["uid"], email, user)
-        return UserRead.model_validate(created_user)
+        return user_read(created_user, storage)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
@@ -40,8 +43,11 @@ async def register(
 
 
 @router.get("/users/me", response_model=UserRead)
-async def get_me(current_user: User = Depends(get_current_user)) -> UserRead:
-    return UserRead.model_validate(current_user)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    storage: IStorageService = Depends(get_storage_service),
+) -> UserRead:
+    return user_read(current_user, storage)
 
 
 @router.patch("/users/me", response_model=UserRead)
@@ -50,6 +56,7 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> UserRead:
     assert current_user.id is not None
     try:
@@ -61,4 +68,6 @@ async def update_me(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred",
         ) from e
-    return UserRead.model_validate(updated_user)
+    if updated_user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user_read(updated_user, storage)

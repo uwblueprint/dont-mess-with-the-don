@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import require_admin
-from app.dependencies.services import get_event_type_service
+from app.dependencies.services import get_event_type_service, get_storage_service
 from app.models import get_session
 from app.models.event_type import EventTypeCreate, EventTypeRead, EventTypeUpdate
+from app.serializers.event_type import event_type_read
 from app.services.implementations.event_type_service import EventTypeService
+from app.services.interfaces.storage_service import IStorageService
 
 router = APIRouter(prefix="/event-types", tags=["event-types"])
 
@@ -16,10 +18,11 @@ router = APIRouter(prefix="/event-types", tags=["event-types"])
 async def get_event_types(
     session: AsyncSession = Depends(get_session),
     event_type_service: EventTypeService = Depends(get_event_type_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> list[EventTypeRead]:
     """Retrieve all event types"""
     event_types = await event_type_service.get_event_types(session)
-    return [EventTypeRead.model_validate(event_type) for event_type in event_types]
+    return [event_type_read(t, storage) for t in event_types]
 
 
 @router.get("/{event_type_id}", response_model=EventTypeRead)
@@ -27,6 +30,7 @@ async def get_event_type(
     event_type_id: UUID,
     session: AsyncSession = Depends(get_session),
     event_type_service: EventTypeService = Depends(get_event_type_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventTypeRead:
     """Get a single event type by ID"""
     event_type = await event_type_service.get_event_type(session, event_type_id)
@@ -35,7 +39,7 @@ async def get_event_type(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"EventType with id {event_type_id} not found",
         )
-    return EventTypeRead.model_validate(event_type)
+    return event_type_read(event_type, storage)
 
 
 @router.post(
@@ -48,11 +52,12 @@ async def create_event_type(
     event_type_data: EventTypeCreate,
     session: AsyncSession = Depends(get_session),
     event_type_service: EventTypeService = Depends(get_event_type_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventTypeRead:
     """Create a new event type"""
     try:
         created_event_type = await event_type_service.create_event_type(session, event_type_data)
-        return EventTypeRead.model_validate(created_event_type)
+        return event_type_read(created_event_type, storage)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
@@ -70,6 +75,7 @@ async def update_event_type(
     event_type_data: EventTypeUpdate,
     session: AsyncSession = Depends(get_session),
     event_type_service: EventTypeService = Depends(get_event_type_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventTypeRead:
     """Update an existing event type"""
     try:
@@ -89,7 +95,7 @@ async def update_event_type(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"EventType with id {event_type_id} not found",
         )
-    return EventTypeRead.model_validate(updated_event_type)
+    return event_type_read(updated_event_type, storage)
 
 
 @router.delete(

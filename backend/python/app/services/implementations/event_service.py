@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from app.models.event import Event, EventCreate, EventUpdate
 from app.models.event_type import EventType
@@ -64,7 +64,7 @@ class EventService:
             select(Event.notification_body)
             .where(Event.event_type_id == event_type_id)
             .where(func.trim(Event.notification_body) != "")
-            .order_by(Event.created_at.desc(), Event.id.desc())
+            .order_by(col(Event.created_at).desc(), col(Event.id).desc())
             .limit(1)
         )
         body = latest.scalar_one_or_none()

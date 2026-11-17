@@ -1,3 +1,7 @@
+from sqlalchemy.exc import IntegrityError
+
+from app.dependencies.services import get_user_service
+
 BASE = "/users/"
 
 
@@ -15,11 +19,27 @@ async def test_create_user_duplicate_email_returns_409(client):
     assert response.status_code == 409
 
 
-async def test_create_user_invalid_profile_pic_url_returns_422(client):
+async def test_create_user_profile_pic_url_instead_of_key_returns_422(client):
     response = await client.post(
-        BASE, json={"email": "pic@example.com", "profile_pic_url": "not-a-url"}
+        BASE,
+        json={"email": "pic@example.com", "profile_pic_key": "https://example.com/pic.jpg"},
     )
     assert response.status_code == 422
+
+
+async def test_user_response_signs_profile_pic_and_hides_key(client):
+    response = await client.post(
+        BASE, json={"email": "pic@example.com", "profile_pic_key": "users/1/abc.jpg"}
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["profile_pic_url"] == "https://private.test/users/1/abc.jpg?expires=3600"
+    assert "profile_pic_key" not in body
+
+
+async def test_user_without_profile_pic_has_null_url(client):
+    response = await client.post(BASE, json={"email": "nopic@example.com"})
+    assert response.json()["profile_pic_url"] is None
 
 
 async def test_get_users_returns_200(client):
@@ -66,6 +86,17 @@ async def test_delete_user_returns_204(client):
 async def test_delete_nonexistent_user_returns_404(client):
     response = await client.delete(f"{BASE}99999")
     assert response.status_code == 404
+
+
+async def test_delete_user_with_signed_waivers_returns_409(app, client):
+    # waiver_signed.user_id / signed_by_user_id are ON DELETE RESTRICT
+    class RestrictedUserService:
+        async def delete_user(self, session, user_id):
+            raise IntegrityError("DELETE", {}, Exception("fk"))
+
+    app.dependency_overrides[get_user_service] = lambda: RestrictedUserService()
+    response = await client.delete(f"{BASE}1")
+    assert response.status_code == 409
 
 
 async def test_get_user_children_returns_200(client):

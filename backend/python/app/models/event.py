@@ -3,12 +3,13 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import ARRAY, String
+from sqlalchemy import ARRAY, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, Field, SQLModel
 
 from .base import BaseModel
 from .form import validate_form_json
+from .object_key import ObjectKey, ObjectKeys
 
 CHECK_IN_TOKEN_MAX_LENGTH = 64
 
@@ -27,13 +28,14 @@ class EventBase(SQLModel):
     max_attendees: int = Field(ge=0)
     event_status: str = Field(min_length=1, max_length=255)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
-    image: str = Field(min_length=1)
+    headline_image_key: ObjectKey = Field(min_length=1)
     start_datetime: datetime
     end_datetime: datetime
-    image_urls: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    post_event_photo_keys: ObjectKeys = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     notes: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
-    notification_body: str | None = Field(default=None)
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict | None = Field(default=None, sa_column=Column(JSONB))
 
 
@@ -41,6 +43,13 @@ class Event(EventBase, BaseModel, table=True):
     """Event model"""
 
     __tablename__ = "events"
+    __table_args__ = (
+        UniqueConstraint(
+            "event_series_id",
+            "start_datetime",
+            name="uq_events_event_series_start_datetime",
+        ),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     # Secret encoded in the event's check-in QR code. Kept off the API models
@@ -64,6 +73,10 @@ class EventCreate(EventBase):
 class EventRead(EventBase):
     """Event response model"""
 
+    headline_image_key: str = Field(exclude=True)  # keys are internal and excluded from output
+    post_event_photo_keys: list[str] = Field(default_factory=list, exclude=True)
+    headline_image_url: str
+    post_event_photo_urls: list[str] = Field(default_factory=list)
     id: UUID
     created_at: datetime | None
     updated_at: datetime | None
@@ -84,13 +97,14 @@ class EventUpdate(SQLModel):
     max_attendees: int | None = Field(default=None, ge=0)
     event_type_id: UUID | None = Field(default=None, foreign_key="event_types.id")
     event_series_id: UUID | None = Field(default=None, foreign_key="event_series.id")
+    waiver_template_id: UUID | None = Field(default=None, foreign_key="waiver_template.id")
     event_status: str | None = Field(default=None, min_length=1, max_length=255)
-    image: str | None = Field(default=None, min_length=1)
+    headline_image_key: ObjectKey | None = Field(default=None, min_length=1)
     start_datetime: datetime | None = Field(default=None)
     end_datetime: datetime | None = Field(default=None)
-    image_urls: list[str] | None = Field(default=None)
+    post_event_photo_keys: ObjectKeys | None = Field(default=None)
     notes: list[str] | None = Field(default=None)
-    notification_body: str | None = Field(default=None)
+    notification_body: str | None = Field(default=None, sa_type=Text)
     form_json: dict | None = Field(default=None)
 
     @field_validator("form_json")

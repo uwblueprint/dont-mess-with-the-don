@@ -19,3 +19,13 @@ export const HOOKS_PAGE = "/hooks";
 export const QR_CODE_POC_PAGE = "/qrCodePOC";
 
 export const MAP_POC_PAGE = "/mapPOC";
+
+export const LOGIN_PAGE = "/login";
+
+export const SIGNUP_PAGE = "/signup";
+
+export const COMPLETE_PROFILE_PAGE = "/complete-profile";
+
+export const ADMIN_HOME_PAGE = "/admin";
+
+export const ATTENDEE_HOME_PAGE = "/home";

@@ -10,14 +10,26 @@ from sqlalchemy.types import ARRAY
 from sqlmodel import SQLModel
 
 from app import create_app
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, get_optional_user
+from app.dependencies.services import get_storage_service
 from app.models import get_session
-from app.models.enum import UserRole
+from app.models.enum import BucketVisibility, UserRole
 from app.models.user import User
 
 # Who every test is logged in as, unless it overrides get_current_user itself
 # (see test_auth_routes.py). Admins can call every route.
 FAKE_ADMIN = User(id=0, email="admin@example.com", role=UserRole.ADMIN)
+
+
+class FakeStorage:
+    """Stands in for R2StorageService: deterministic URLs, no boto3 / network."""
+
+    def url_for(
+        self, key: str, visibility: BucketVisibility, *, expires_in: int | None = None
+    ) -> str:
+        if visibility == BucketVisibility.PUBLIC:
+            return f"https://public.test/{key}"
+        return f"https://private.test/{key}?expires={expires_in or 3600}"
 
 
 # SQLite does not natively support PostgreSQL-specific types (e.g. ARRAY, JSONB) used in models.
@@ -59,6 +71,9 @@ async def client(app):
 
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_current_user] = lambda: FAKE_ADMIN
+    # Logged in by default, so signed (private) URLs are included in responses
+    app.dependency_overrides[get_optional_user] = lambda: FAKE_ADMIN
+    app.dependency_overrides[get_storage_service] = lambda: FakeStorage()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac

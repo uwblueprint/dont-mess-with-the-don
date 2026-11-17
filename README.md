@@ -100,7 +100,7 @@ the database already has data, so it is safe to leave enabled across restarts.
   columns empty.
 - Rows are inserted in file order, so list parents before children in
   `users.csv` (the `guardian_id` self-reference).
-- JSON/array columns (`form_json`, `response_json`, `image_urls`, `notes`) must
+- JSON/array columns (`form_json`, `response_json`, `post_event_photo_keys`, `notes`) must
   contain valid JSON, e.g. `{"formId": "frm_beach_cleanup"}` or `["a", "b"]`.
   Wrap those cells in double quotes and double any internal quotes (standard
   CSV quoting).
@@ -245,14 +245,38 @@ Reusable forms that aren't tied to one event, such as a post-event feedback form
 
 ## Object storage (Cloudflare R2)
 
-File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R2StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). It has two async methods, `await upload_file(...)` and `await delete_file(...)`. Config is read from the root `.env` through `app/config.py`:
+File uploads go to Cloudflare R2 (S3-compatible, accessed with boto3) through `R2StorageService` (`backend/python/app/services/implementations/storage_service.py`, get it with `get_storage_service()`). Config is read from the root `.env` through `app/config.py`:
 
 | Variable | Required | Notes |
 |---|---|---|
 | `R2_ENDPOINT_URL` | yes | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
-| `R2_BUCKET_NAME` | yes | Use a different bucket per environment (e.g. dev vs prod) |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token|
+| `R2_PUBLIC_BUCKET_NAME` | yes | `dmwtd-public-{env}`. Public access enabled on this bucket only |
+| `R2_PRIVATE_BUCKET_NAME` | yes | `dmwtd-private-{env}`. Never public |
+| `R2_PUBLIC_BASE_URL` | yes | Public URL of the public bucket (r2.dev subdomain or custom domain) |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | yes | From an R2 API token with access to both buckets |
 | `R2_KEY_PREFIX` | no | e.g. `dev/` or `prod/` if environments share a bucket |
+| `SIGNED_URL_TTL_MEDIA_SECONDS` | no | Default `3600` (profile pics, post-event photos) |
+| `SIGNED_URL_TTL_WAIVER_SIGNED_SECONDS` | no | Default `300` (completed/signed waivers) |
+
+The R2 settings are required in production, where missing ones fail the deploy. In development and testing you can leave all of them unset: the app then uses `UnconfiguredStorageService`, which returns placeholder URLs (`https://r2-not-configured.invalid/...`) and raises on upload or delete. Setting only some of them is an error in every environment.
+
+R2 enables public access per bucket, so each environment has two buckets: a public one for objects anyone may fetch and a private one reachable only through short-lived signed URLs. `url_for(key, visibility)` builds either: a permanent public URL, or a signed URL (signing is local, no network call). `upload_file` and `delete_file` take a `BucketVisibility` to pick the bucket. Keys are UUID-based (`events/{event_id}/{uuid}.jpg`, from `build_key`), never the uploaded filename, and the environment's key prefix is applied by the service, so the same key works in every environment.
+
+### Access model: public-read vs signed URLs
+
+The database stores **object keys only** (never URLs, never a signed URL). Serializers in `app/serializers/` build each response from its row and call `url_for` on the storage service for the URL fields; routes return `event_read(event, storage)` and so on, and the ORM models know nothing about storage.
+
+| Type | Column | Bucket / access | Lifetime |
+|---|---|---|---|
+| Event / series / type headline image | `events.headline_image_key`, `event_series.headline_image_key`, `event_types.headline_image_key` | public; permanent URL | n/a |
+| Waiver template (blank PDF) | `waiver_template.document_key` | public; permanent URL | n/a |
+| Profile pic | `users.profile_pic_key` | private; signed URL | ~1 hour |
+| Post-event photos (events only) | `events.post_event_photo_keys[]` | private; signed URL, admins and the event's attendees only | ~1 hour |
+| Completed waivers | `waiver_signed.document_key` | private; signed URL, owner / guardian / admin only | ~5 minutes |
+
+Why: headline images and blank templates are promotional or contain no personal data, so a public URL is fine (and cacheable). Photos of identifiable people (often minors) and signed waivers are private, so deleting the object makes every link stop working within the URL lifetime. Signing is local (no network call).
+
+API responses return resolved URLs only (never keys), in the fields `headline_image_url`, `post_event_photo_urls`, `profile_pic_url` and `document_url`. **Frontend:** treat them as opaque strings, and refetch the record when an image returns 403 or the URL has expired. `post_event_photo_urls` (post-event photos) are filled only for admins and the event's attendees: anyone with an accepted registration or a check-in for that event, and the guardian of such a child (`app/utilities/photo_access.py`). Everyone else, including anonymous callers, gets an empty list. Event series have no post-event photos. Completed waivers are fetched with `GET /waiver-signed/{id}/url`, which checks authorization and returns a fresh 5-minute URL.
 
 ## Frontend URL
 

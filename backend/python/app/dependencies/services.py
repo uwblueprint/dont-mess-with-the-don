@@ -1,8 +1,10 @@
 import logging
 from functools import lru_cache
 
-from app.config import settings
+from app.config import Settings, settings
 from app.services.implementations.attendance_service import AttendanceService
+from app.services.implementations.check_in_service import CheckInService
+from app.services.implementations.confirmation_request_service import ConfirmationRequestService
 from app.services.implementations.entity_service import EntityService
 from app.services.implementations.event_series_service import EventSeriesService
 from app.services.implementations.event_service import EventService
@@ -13,7 +15,9 @@ from app.services.implementations.registration_service import RegistrationServic
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.storage_service import R2StorageService
+from app.services.implementations.unconfigured_storage_service import UnconfiguredStorageService
 from app.services.implementations.user_service import UserService
+from app.services.interfaces.storage_service import IStorageService
 
 
 @lru_cache
@@ -58,6 +62,13 @@ def get_user_service() -> UserService:
 
 
 @lru_cache
+def get_confirmation_request_service() -> ConfirmationRequestService:
+    """Get confirmation request service instance"""
+    logger = get_logger()
+    return ConfirmationRequestService(logger)
+
+
+@lru_cache
 def get_form_submission_service() -> FormSubmissionService:
     """Get form submission service instance"""
     logger = get_logger()
@@ -79,6 +90,13 @@ def get_attendance_service() -> AttendanceService:
 
 
 @lru_cache
+def get_check_in_service() -> CheckInService:
+    """Get check-in service instance"""
+    logger = get_logger()
+    return CheckInService(logger)
+
+
+@lru_cache
 def get_event_series_service() -> EventSeriesService:
     """Get event series service instance"""
     logger = get_logger()
@@ -92,10 +110,33 @@ def get_event_type_service() -> EventTypeService:
     return EventTypeService(logger)
 
 
+R2_REQUIRED_SETTINGS = (
+    "r2_access_key_id",
+    "r2_secret_access_key",
+    "r2_public_bucket_name",
+    "r2_private_bucket_name",
+    "r2_public_base_url",
+    "r2_endpoint_url",
+)
+
+
+def build_storage_service(logger: logging.Logger, app_settings: Settings) -> IStorageService:
+    """R2 when configured. Outside production, no R2 settings at all gives a stub.
+
+    Production always builds R2, so missing settings fail there. A partial R2
+    config also fails in every environment, since it's most likely a typo.
+    """
+    unconfigured = not any(getattr(app_settings, name) for name in R2_REQUIRED_SETTINGS)
+    if unconfigured and not app_settings.is_production:
+        logger.warning("R2 is not configured; using placeholder storage URLs")
+        return UnconfiguredStorageService()
+    return R2StorageService(logger, app_settings)
+
+
 @lru_cache
-def get_storage_service() -> R2StorageService:
+def get_storage_service() -> IStorageService:
     """Get storage service instance (bucket/credentials come from settings)"""
-    return R2StorageService(get_logger(), settings)
+    return build_storage_service(get_logger(), settings)
 
 
 @lru_cache

@@ -6,7 +6,7 @@ BASE = "/event-types/"
 
 VALID_PAYLOAD = {
     "name": "Poker Night",
-    "image": "https://example.com/poker.png",
+    "headline_image_key": "event-images/poker.png",
     "description": "A friendly game of poker",
     "location": "Toronto",
     "max_attendees": 8,
@@ -33,10 +33,17 @@ async def test_create_event_type_negative_max_attendees_returns_422(client):
     assert response.status_code == 422
 
 
-async def test_create_event_type_invalid_image_url_returns_422(client):
-    payload = {**VALID_PAYLOAD, "image": "not-a-url"}
+async def test_create_event_type_image_url_instead_of_key_returns_422(client):
+    payload = {**VALID_PAYLOAD, "headline_image_key": "https://example.com/x.png"}
     response = await client.post(BASE, json=payload)
     assert response.status_code == 422
+
+
+async def test_event_type_response_has_public_image_url_and_hides_key(client):
+    response = await client.post(BASE, json=VALID_PAYLOAD)
+    body = response.json()
+    assert body["headline_image_url"] == "https://public.test/event-images/poker.png"
+    assert "headline_image_key" not in body
 
 
 async def test_get_event_types_returns_200(client):

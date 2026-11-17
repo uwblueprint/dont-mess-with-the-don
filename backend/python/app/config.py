@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # (e.g. event check-in links)
     frontend_url: str = Field(default="http://localhost:3000")
 
+    # Event check-in opens this many minutes before an event starts, and closes when it ends
+    check_in_opens_minutes_before: int = Field(default=15)
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"
@@ -52,6 +55,7 @@ class Settings(BaseSettings):
 
     # Scheduler
     scheduler_timezone: str = Field(default="America/Toronto")
+    event_generation_horizon_days: int = Field(default=90, ge=1)
 
     # Firebase Auth: the only thing needed to check ID tokens (no service-account key)
     firebase_project_id: str = Field(default="")
@@ -59,9 +63,14 @@ class Settings(BaseSettings):
     # Object storage (Cloudflare R2)
     r2_access_key_id: str = Field(default="")
     r2_secret_access_key: str = Field(default="")
-    r2_bucket_name: str = Field(default="")
+    r2_public_bucket_name: str = Field(default="")
+    r2_private_bucket_name: str = Field(default="")
+    r2_public_base_url: str = Field(default="")
     r2_key_prefix: str = Field(default="")
     r2_endpoint_url: str = Field(default="")
+    # Signed URL lifetimes (seconds)
+    signed_url_ttl_media_seconds: int = Field(default=3600)
+    signed_url_ttl_waiver_signed_seconds: int = Field(default=300)
 
 
 def get_settings() -> Settings:
