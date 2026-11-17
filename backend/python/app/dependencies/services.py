@@ -1,6 +1,7 @@
 import logging
 from functools import lru_cache
 
+from app.config import settings
 from app.services.implementations.attendance_service import AttendanceService
 from app.services.implementations.confirmation_request_service import ConfirmationRequestService
 from app.services.implementations.entity_service import EntityService
@@ -8,9 +9,11 @@ from app.services.implementations.event_series_service import EventSeriesService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.form_submission_service import FormSubmissionService
+from app.services.implementations.form_template_service import FormTemplateService
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
+from app.services.implementations.storage_service import R2StorageService
 from app.services.implementations.user_service import UserService
 
 
@@ -70,6 +73,13 @@ def get_form_submission_service() -> FormSubmissionService:
 
 
 @lru_cache
+def get_form_template_service() -> FormTemplateService:
+    """Get form template service instance"""
+    logger = get_logger()
+    return FormTemplateService(logger)
+
+
+@lru_cache
 def get_attendance_service() -> AttendanceService:
     """Get attendance service instance"""
     logger = get_logger()
@@ -88,6 +98,12 @@ def get_event_type_service() -> EventTypeService:
     """Get event type service instance"""
     logger = get_logger()
     return EventTypeService(logger)
+
+
+@lru_cache
+def get_storage_service() -> R2StorageService:
+    """Get storage service instance (bucket/credentials come from settings)"""
+    return R2StorageService(get_logger(), settings)
 
 
 @lru_cache

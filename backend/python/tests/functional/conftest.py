@@ -10,7 +10,14 @@ from sqlalchemy.types import ARRAY
 from sqlmodel import SQLModel
 
 from app import create_app
+from app.dependencies.auth import get_current_user
 from app.models import get_session
+from app.models.enum import UserRole
+from app.models.user import User
+
+# Who every test is logged in as, unless it overrides get_current_user itself
+# (see test_auth_routes.py). Admins can call every route.
+FAKE_ADMIN = User(id=0, email="admin@example.com", role=UserRole.ADMIN)
 
 
 # SQLite does not natively support PostgreSQL-specific types (e.g. ARRAY, JSONB) used in models.
@@ -51,6 +58,7 @@ async def client(app):
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_current_user] = lambda: FAKE_ADMIN
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
