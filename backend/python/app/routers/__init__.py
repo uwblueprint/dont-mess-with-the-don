@@ -2,8 +2,8 @@ from fastapi import FastAPI
 
 from . import (
     attendance_routes,
-    confirmation_request_routes,
     auth_routes,
+    confirmation_request_routes,
     entity_routes,
     event_routes,
     event_series_routes,
