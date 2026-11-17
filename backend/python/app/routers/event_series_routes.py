@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import require_admin
-from app.dependencies.services import get_event_series_service
+from app.dependencies.services import get_event_series_service, get_storage_service
 from app.models import get_session
 from app.models.event_series import EventSeriesCreate, EventSeriesRead, EventSeriesUpdate
+from app.serializers.event_series import event_series_read
 from app.services.implementations.event_series_service import EventSeriesService
+from app.services.interfaces.storage_service import IStorageService
 
 router = APIRouter(prefix="/event-series", tags=["event-series"])
 
@@ -16,10 +18,11 @@ router = APIRouter(prefix="/event-series", tags=["event-series"])
 async def get_event_series_list(
     session: AsyncSession = Depends(get_session),
     event_series_service: EventSeriesService = Depends(get_event_series_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> list[EventSeriesRead]:
     try:
         event_series_list = await event_series_service.get_event_series_list(session)
-        return [EventSeriesRead.model_validate(event_series) for event_series in event_series_list]
+        return [event_series_read(s, storage) for s in event_series_list]
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -32,6 +35,7 @@ async def get_event_series(
     event_series_id: UUID,
     session: AsyncSession = Depends(get_session),
     event_series_service: EventSeriesService = Depends(get_event_series_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventSeriesRead:
     try:
         event_series = await event_series_service.get_event_series(session, event_series_id)
@@ -45,7 +49,7 @@ async def get_event_series(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Event series with id {event_series_id} not found",
         )
-    return EventSeriesRead.model_validate(event_series)
+    return event_series_read(event_series, storage)
 
 
 @router.post(
@@ -58,10 +62,11 @@ async def create_event_series(
     event_series: EventSeriesCreate,
     session: AsyncSession = Depends(get_session),
     event_series_service: EventSeriesService = Depends(get_event_series_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventSeriesRead:
     try:
         created_event_series = await event_series_service.create_event_series(session, event_series)
-        return EventSeriesRead.model_validate(created_event_series)
+        return event_series_read(created_event_series, storage)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -77,6 +82,7 @@ async def update_event_series(
     event_series: EventSeriesUpdate,
     session: AsyncSession = Depends(get_session),
     event_series_service: EventSeriesService = Depends(get_event_series_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventSeriesRead:
     try:
         updated_event_series = await event_series_service.update_event_series(
@@ -92,7 +98,7 @@ async def update_event_series(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Event series with id {event_series_id} not found",
         )
-    return EventSeriesRead.model_validate(updated_event_series)
+    return event_series_read(updated_event_series, storage)
 
 
 @router.delete(

@@ -95,6 +95,8 @@ class EventSeriesCreate(EventSeriesBase):
 class EventSeriesRead(EventSeriesBase):
     """EventSeries response model"""
 
+    headline_image_key: str = Field(exclude=True)  # keys are internal and excluded from output
+    headline_image_url: str
     id: UUID
     created_at: datetime | None
     updated_at: datetime | None

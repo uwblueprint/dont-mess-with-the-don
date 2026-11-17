@@ -3,10 +3,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies.auth import require_admin
-from app.dependencies.services import get_user_service
+from app.dependencies.services import get_storage_service, get_user_service
 from app.models import get_session
 from app.models.user import UserCreate, UserRead, UserUpdate
+from app.serializers.user import user_read
 from app.services.implementations.user_service import UserService
+from app.services.interfaces.storage_service import IStorageService
 
 router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(require_admin)])
 
@@ -15,10 +17,11 @@ router = APIRouter(prefix="/users", tags=["users"], dependencies=[Depends(requir
 async def get_users(
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> list[UserRead]:
     try:
         users = await user_service.get_users(session)
-        return [UserRead.model_validate(user) for user in users]
+        return [user_read(u, storage) for u in users]
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -31,6 +34,7 @@ async def get_user(
     user_id: int,
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> UserRead:
     try:
         user = await user_service.get_user(session, user_id)
@@ -44,7 +48,7 @@ async def get_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found",
         )
-    return UserRead.model_validate(user)
+    return user_read(user, storage)
 
 
 @router.get("/{user_id}/children", response_model=list[UserRead])
@@ -52,6 +56,7 @@ async def get_user_children(
     user_id: int,
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> list[UserRead]:
     try:
         children = await user_service.get_user_children(session, user_id)
@@ -65,7 +70,7 @@ async def get_user_children(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found",
         )
-    return [UserRead.model_validate(child) for child in children]
+    return [user_read(u, storage) for u in children]
 
 
 @router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -73,10 +78,11 @@ async def create_user(
     user: UserCreate,
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> UserRead:
     try:
         created_user = await user_service.create_user(session, user)
-        return UserRead.model_validate(created_user)
+        return user_read(created_user, storage)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
@@ -92,6 +98,7 @@ async def update_user(
     user: UserUpdate,
     session: AsyncSession = Depends(get_session),
     user_service: UserService = Depends(get_user_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> UserRead:
     try:
         updated_user = await user_service.update_user(session, user_id, user)
@@ -105,7 +112,7 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found",
         )
-    return UserRead.model_validate(updated_user)
+    return user_read(updated_user, storage)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

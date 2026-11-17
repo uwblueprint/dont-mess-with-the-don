@@ -14,6 +14,7 @@ from . import (
     registration_routes,
     simple_entity_routes,
     user_routes,
+    waiver_signed_routes,
 )
 
 
@@ -32,3 +33,4 @@ def init_app(app: FastAPI) -> None:
     app.include_router(attendance_routes.router)
     app.include_router(event_series_routes.router)
     app.include_router(event_type_routes.router)
+    app.include_router(waiver_signed_routes.router)

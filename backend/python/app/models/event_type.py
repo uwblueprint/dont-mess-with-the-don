@@ -44,6 +44,8 @@ class EventTypeCreate(EventTypeBase):
 class EventTypeRead(EventTypeBase):
     """EventType response model"""
 
+    headline_image_key: str = Field(exclude=True)  # keys are internal and excluded from output
+    headline_image_url: str
     id: UUID
 
 

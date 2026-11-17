@@ -9,12 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.dependencies.auth import require_admin
-from app.dependencies.services import get_event_service, get_form_submission_service
+from app.dependencies.services import (
+    get_event_service,
+    get_form_submission_service,
+    get_storage_service,
+)
 from app.models import get_session
 from app.models.event import EventCheckInLink, EventCreate, EventRead, EventUpdate
 from app.models.form_submission import FormSubmissionRead
+from app.serializers.event import event_read
 from app.services.implementations.event_service import EventService
 from app.services.implementations.form_submission_service import FormSubmissionService
+from app.services.interfaces.storage_service import IStorageService
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -28,6 +34,7 @@ async def get_events(
     starts_before: date | None = None,
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> list[EventRead]:
     """Retrieve all events"""
     try:
@@ -45,7 +52,8 @@ async def get_events(
             starts_after=starts_after_datetime,
             starts_before=starts_before_datetime,
         )
-        return [EventRead.model_validate(event) for event in events]
+        # Post-event photos are not shown on public endpoints
+        return [event_read(e, storage) for e in events]
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -62,11 +70,12 @@ async def create_event(
     event: EventCreate,
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventRead:
     """Create a new event"""
     try:
         created_event = await event_service.create_event(session, event)
-        return EventRead.model_validate(created_event)
+        return event_read(created_event, storage, include_photos=True)
     except Exception as e:
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
@@ -78,6 +87,7 @@ async def get_event(
     event_id: UUID,
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventRead:
     """Get a single event by ID"""
     event = await event_service.get_event(session, event_id)
@@ -86,7 +96,7 @@ async def get_event(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Event with id {event_id} not found",
         )
-    return EventRead.model_validate(event)
+    return event_read(event, storage)
 
 
 @router.get(
@@ -141,6 +151,7 @@ async def update_event(
     event: EventUpdate,
     session: AsyncSession = Depends(get_session),
     event_service: EventService = Depends(get_event_service),
+    storage: IStorageService = Depends(get_storage_service),
 ) -> EventRead:
     """Update an existing event"""
     updated_event = await event_service.update_event(session, event_id, event)
@@ -149,7 +160,7 @@ async def update_event(
             status_code=http_status.HTTP_404_NOT_FOUND,
             detail=f"Event with id {event_id} not found",
         )
-    return EventRead.model_validate(updated_event)
+    return event_read(updated_event, storage, include_photos=True)
 
 
 @router.delete(

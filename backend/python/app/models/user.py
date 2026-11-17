@@ -104,6 +104,8 @@ class UserCreate(UserBase):
 class UserRead(UserBase):
     """User response model"""
 
+    profile_pic_key: str | None = Field(default=None, exclude=True)
+    profile_pic_url: str | None = None
     id: int
     role: UserRole
 

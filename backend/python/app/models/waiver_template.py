@@ -39,8 +39,10 @@ class WaiverTemplateCreate(WaiverTemplateBase):
 
 
 class WaiverTemplateRead(WaiverTemplateBase):
-    """Waiver template response model"""
+    """Waiver template response model (key hidden; public `document_url` exposed)"""
 
+    document_key: str = Field(exclude=True)
+    document_url: str
     id: UUID
 
 

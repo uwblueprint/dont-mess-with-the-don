@@ -27,12 +27,19 @@ async def test_create_user_profile_pic_url_instead_of_key_returns_422(client):
     assert response.status_code == 422
 
 
-async def test_create_user_stores_profile_pic_key(client):
+async def test_user_response_signs_profile_pic_and_hides_key(client):
     response = await client.post(
         BASE, json={"email": "pic@example.com", "profile_pic_key": "users/1/abc.jpg"}
     )
     assert response.status_code == 201
-    assert response.json()["profile_pic_key"] == "users/1/abc.jpg"
+    body = response.json()
+    assert body["profile_pic_url"] == "https://private.test/users/1/abc.jpg?expires=3600"
+    assert "profile_pic_key" not in body
+
+
+async def test_user_without_profile_pic_has_null_url(client):
+    response = await client.post(BASE, json={"email": "nopic@example.com"})
+    assert response.json()["profile_pic_url"] is None
 
 
 async def test_get_users_returns_200(client):

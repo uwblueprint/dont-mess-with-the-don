@@ -331,10 +331,23 @@ async def test_get_event_by_id_does_not_expose_check_in_token(client, event_serv
     assert "secret-token-detail" not in response.text
 
 
-async def test_event_response_returns_object_keys(client, event_service):
-    body = (await client.get(BASE)).json()[0]
-    assert body["headline_image_key"] == "event-images/headline.jpg"
-    assert body["post_event_photo_keys"] == ["events/e1/upload.jpg"]
+async def test_admin_create_response_resolves_urls_and_hides_keys(client, event_service):
+    body = (await client.post(BASE, json=event_request_payload())).json()
+    assert body["headline_image_url"] == "https://public.test/event-images/headline.jpg"
+    assert body["post_event_photo_urls"] == [
+        "https://private.test/events/e1/upload.jpg?expires=3600"
+    ]
+    assert "headline_image_key" not in body
+    assert "post_event_photo_keys" not in body
+
+
+async def test_public_event_responses_omit_post_event_photos(client, event_service):
+    for url in (BASE, f"{BASE}/{event_service.events[0].id}"):
+        response = await client.get(url)
+        body = response.json()
+        event = body[0] if isinstance(body, list) else body
+        assert event["headline_image_url"] == "https://public.test/event-images/headline.jpg"
+        assert event["post_event_photo_urls"] == []
 
 
 async def test_create_event_rejects_url_as_image_key(client, event_service):
