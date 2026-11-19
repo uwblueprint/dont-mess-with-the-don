@@ -25,6 +25,14 @@ class StrikeTargetNotFoundError(ValueError):
     """The user or event a manual strike refers to does not exist."""
 
 
+class StrikeNotFoundError(LookupError):
+    """The strike does not exist."""
+
+
+class StrikeAlreadyRevokedError(ValueError):
+    """The strike was already revoked."""
+
+
 def strike_expires_at(event_start: datetime | None, created_at: datetime | None) -> datetime:
     """When a strike expires: a set number of months after the event's start.
 
@@ -180,3 +188,27 @@ class StrikeService:
             statement = statement.where(Strike.event_id == event_id)
         result = await session.execute(statement)
         return list(result.scalars().all())
+
+    async def revoke_strike(
+        self,
+        session: AsyncSession,
+        strike_id: UUID,
+        reason: str,
+        revoked_by: int,
+        now: datetime | None = None,
+    ) -> Strike:
+        """Revoke a strike so it no longer counts. A strike can only be revoked once."""
+        strike = await session.get(Strike, strike_id)
+        if strike is None:
+            raise StrikeNotFoundError(f"Strike {strike_id} not found")
+        if strike.revoked_at is not None:
+            raise StrikeAlreadyRevokedError(f"Strike {strike_id} is already revoked")
+
+        now = now or toronto_now()
+        strike.revoked_at = now
+        strike.revoked_by = revoked_by
+        strike.revoke_reason = reason
+        strike.updated_at = now
+        await session.commit()
+        await session.refresh(strike)
+        return strike

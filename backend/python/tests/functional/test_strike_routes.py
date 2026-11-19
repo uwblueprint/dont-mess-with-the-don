@@ -173,3 +173,71 @@ async def test_listing_strikes_requires_login(app, client):
     app.dependency_overrides.pop(get_current_user)
 
     assert (await client.get("/strikes")).status_code == 401
+
+
+# --- POST /strikes/{id}/revoke ---
+
+
+async def test_admin_revokes_a_strike(client):
+    user = await create_user(client, email="forgiven@example.com")
+    strike = await give_strike(client, user["id"])
+    before = toronto_now()
+
+    response = await client.post(
+        f"/strikes/{strike['id']}/revoke", json={"reason": "Had a doctor's note"}
+    )
+
+    assert response.status_code == 200
+    revoked = response.json()
+    assert revoked["active"] is False
+    assert revoked["revoked_by"] == 0
+    assert revoked["revoke_reason"] == "Had a doctor's note"
+    assert before <= datetime.fromisoformat(revoked["revoked_at"]) <= toronto_now()
+
+
+@pytest.mark.parametrize("body", [{"reason": ""}, {}], ids=["empty-reason", "no-reason"])
+async def test_revoking_requires_a_reason(client, body):
+    user = await create_user(client, email="reasonless@example.com")
+    strike = await give_strike(client, user["id"])
+
+    response = await client.post(f"/strikes/{strike['id']}/revoke", json=body)
+
+    assert response.status_code == 422
+
+
+async def test_revoking_an_unknown_strike_returns_404(client):
+    response = await client.post(
+        "/strikes/00000000-0000-0000-0000-000000000000/revoke", json={"reason": "x"}
+    )
+
+    assert response.status_code == 404
+
+
+async def test_revoking_twice_returns_409(client):
+    user = await create_user(client, email="twice_revoked@example.com")
+    strike = await give_strike(client, user["id"])
+    await client.post(f"/strikes/{strike['id']}/revoke", json={"reason": "first"})
+
+    response = await client.post(f"/strikes/{strike['id']}/revoke", json={"reason": "second"})
+
+    assert response.status_code == 409
+
+
+async def test_attendee_cannot_revoke_strikes(app, client):
+    user = await create_user(client, email="self_forgiver@example.com")
+    strike = await give_strike(client, user["id"])
+    act_as(app, user)
+
+    response = await client.post(f"/strikes/{strike['id']}/revoke", json={"reason": "please"})
+
+    assert response.status_code == 403
+
+
+async def test_revoking_requires_login(app, client):
+    app.dependency_overrides.pop(get_current_user)
+
+    response = await client.post(
+        "/strikes/00000000-0000-0000-0000-000000000000/revoke", json={"reason": "x"}
+    )
+
+    assert response.status_code == 401
