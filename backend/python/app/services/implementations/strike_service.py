@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import exists, func
@@ -167,3 +168,15 @@ class StrikeService:
         await session.commit()
         await session.refresh(strike)
         return strike
+
+    async def list_strikes(
+        self, session: AsyncSession, user_id: int | None = None, event_id: UUID | None = None
+    ) -> list[Strike]:
+        """All strikes, newest first, optionally for one user and/or one event."""
+        statement = select(Strike).order_by(col(Strike.created_at).desc())
+        if user_id is not None:
+            statement = statement.where(Strike.user_id == user_id)
+        if event_id is not None:
+            statement = statement.where(Strike.event_id == event_id)
+        result = await session.execute(statement)
+        return list(result.scalars().all())

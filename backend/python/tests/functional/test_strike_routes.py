@@ -132,3 +132,44 @@ async def test_giving_strikes_requires_login(app, client):
     response = await client.post("/strikes", json={"user_id": 1, "note": "x"})
 
     assert response.status_code == 401
+
+
+# --- GET /strikes ---
+
+
+async def test_admin_lists_strikes_with_filters(client):
+    first = await create_user(client, email="first@example.com")
+    second = await create_user(client, email="second@example.com")
+    event = await create_event(client, datetime(2026, 12, 15, 10, 0))
+    for_event = await give_strike(client, first["id"], event_id=event["id"])
+    no_event = await give_strike(client, first["id"])
+    other_user = await give_strike(client, second["id"], event_id=event["id"])
+
+    everything = await client.get("/strikes")
+    by_user = await client.get("/strikes", params={"user_id": first["id"]})
+    by_event = await client.get("/strikes", params={"event_id": event["id"]})
+    both = await client.get("/strikes", params={"user_id": first["id"], "event_id": event["id"]})
+
+    def ids(response) -> set[str]:
+        assert response.status_code == 200
+        return {strike["id"] for strike in response.json()}
+
+    assert ids(everything) == {for_event["id"], no_event["id"], other_user["id"]}
+    assert ids(by_user) == {for_event["id"], no_event["id"]}
+    assert ids(by_event) == {for_event["id"], other_user["id"]}
+    assert ids(both) == {for_event["id"]}
+
+
+async def test_attendee_cannot_list_strikes(app, client):
+    user = await create_user(client, email="nosy@example.com")
+    act_as(app, user)
+
+    response = await client.get("/strikes", params={"user_id": user["id"]})
+
+    assert response.status_code == 403
+
+
+async def test_listing_strikes_requires_login(app, client):
+    app.dependency_overrides.pop(get_current_user)
+
+    assert (await client.get("/strikes")).status_code == 401
