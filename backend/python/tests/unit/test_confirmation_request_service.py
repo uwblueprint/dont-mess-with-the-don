@@ -80,29 +80,6 @@ async def test_create_confirmation_request_reports_duplicate_after_integrity_err
     session.rollback.assert_awaited_once()
 
 
-@pytest.mark.parametrize(
-    ("strike_count", "expected"),
-    [(1, False), (2, True)],
-)
-async def test_requires_positive_confirmation_uses_two_strike_threshold(
-    strike_count: int, expected: bool
-):
-    session = AsyncMock(spec=AsyncSession)
-    result = Mock()
-    result.scalar_one.return_value = strike_count
-    session.execute.return_value = result
-    service = ConfirmationRequestService(Mock())
-
-    requires_confirmation = await service.requires_positive_confirmation(
-        session,
-        user_id=42,
-        as_of=datetime(2026, 10, 7),
-    )
-
-    assert requires_confirmation is expected
-    session.execute.assert_awaited_once()
-
-
 EVENT_START = datetime(2026, 12, 15, 10, 0, 0)
 
 

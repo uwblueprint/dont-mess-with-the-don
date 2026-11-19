@@ -1,27 +1,23 @@
 import logging
-from calendar import monthrange
 from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
-from app.models.attendance import Attendance
 from app.models.confirmation_requests import (
     ConfirmationRequest,
     ConfirmationRequestCreate,
     ConfirmationRequestUpdate,
 )
-from app.models.enum import ConfirmationRequestStatusEnum, RegistrationStatusEnum
+from app.models.enum import ConfirmationRequestStatusEnum
 from app.models.event import Event
 from app.models.registration import Registration
 from app.services.implementations.strike_service import StrikeService
 from app.services.interfaces.confirmation_request_service import IConfirmationRequestService
 
-MIN_STRIKES_FOR_CONFIRMATION = 2
 CONFIRMATION_DEADLINE_HOURS_BEFORE_EVENT = 72
 MIN_CONFIRMATION_WINDOW_HOURS = 24
 
@@ -91,43 +87,6 @@ class ConfirmationRequestService(IConfirmationRequestService):
         except Exception as error:
             self.logger.error(f"Failed to get confirmation request {request_id}: {error!s}")
             raise error
-
-    async def requires_positive_confirmation(
-        self, session: AsyncSession, user_id: int, as_of: datetime | None = None
-    ) -> bool:
-        """Return whether a user has two no-shows in the previous three months."""
-        as_of = (as_of or datetime.now(ZoneInfo("America/Toronto"))).replace(tzinfo=None)
-        month = as_of.month - 3
-        year = as_of.year
-        if month <= 0:
-            month += 12
-            year -= 1
-        cutoff = as_of.replace(
-            year=year,
-            month=month,
-            day=min(as_of.day, monthrange(year, month)[1]),
-        )
-
-        statement = (
-            select(func.count(col(Registration.id)))
-            .join(Event, col(Event.id) == col(Registration.event_instance_id))
-            .outerjoin(
-                Attendance,
-                and_(
-                    col(Attendance.user_id) == col(Registration.user_id),
-                    col(Attendance.event_instance_id) == col(Registration.event_instance_id),
-                ),
-            )
-            .where(
-                col(Registration.user_id) == user_id,
-                col(Registration.status) == RegistrationStatusEnum.ACCEPTED,
-                col(Event.end_datetime) >= cutoff,
-                col(Event.end_datetime) < as_of,
-                col(Attendance.id).is_(None),
-            )
-        )
-        result = await session.execute(statement)
-        return result.scalar_one() >= MIN_STRIKES_FOR_CONFIRMATION
 
     async def add_for_registration_if_required(
         self, session: AsyncSession, registration: Registration

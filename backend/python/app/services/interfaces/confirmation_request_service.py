@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,12 +24,6 @@ class IConfirmationRequestService(ABC):
     async def get_confirmation_request(
         self, session: AsyncSession, request_id: UUID
     ) -> ConfirmationRequest | None:
-        pass
-
-    @abstractmethod
-    async def requires_positive_confirmation(
-        self, session: AsyncSession, user_id: int, as_of: datetime | None = None
-    ) -> bool:
         pass
 
     @abstractmethod
