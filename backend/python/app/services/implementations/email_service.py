@@ -1,56 +1,95 @@
-import base64
-from email.mime.text import MIMEText
+import logging
+from typing import Any
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+import httpx
 
-from ..interfaces.email_service import IEmailService
+from ..interfaces.email_service import EmailSendError, IEmailService
+
+RESEND_API_URL = "https://api.resend.com/emails"
 
 
-class EmailService(IEmailService):
+class ResendEmailService(IEmailService):
     """
-    EmailService implementation for handling email related functionality
+    EmailService implementation that sends through Resend's REST API
     """
 
-    def __init__(self, logger, credentials, sender_email, display_name=None):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        api_key: str,
+        sender: str,
+        *,
+        transport: httpx.AsyncBaseTransport | None = None,
+        timeout_seconds: float = 10.0,
+    ):
         """
-        Create an instance of EmailService
+        Create an instance of ResendEmailService
 
         :param logger: application's logger instance
-        :type logger: logger
-        :param credentials: oauth credentials containing client_id, client_secret,
-        token_uri, and refresh_token
-        :type credentials: dict
-        :param sender_email: the sender's email address
-        :type sender_email: str
-        :param display_name: the sender's display name, defaults to None
-        :type display_name: str, optional
+        :param api_key: Resend API key (RESEND_API_KEY)
+        :param sender: the "from" address, e.g. "Don't Mess With The Don <noreply@example.org>"
+            (EMAIL_FROM). Its domain must be verified in Resend.
+        :param transport: httpx transport to use instead of the network (tests)
+        :param timeout_seconds: how long to wait for Resend before giving up
+        :raises ValueError: if the API key or sender is missing
         """
+        if not api_key:
+            raise ValueError("RESEND_API_KEY is not configured")
+        if not sender:
+            raise ValueError("EMAIL_FROM is not configured")
         self.logger = logger
-        creds = Credentials(None, **credentials)
-        self.service = build("gmail", "v1", credentials=creds)
-        self.sender_email = sender_email
-        if display_name:
-            self.sender = "{name} <{email}>".format(name=display_name, email=sender_email)
-        else:
-            self.sender = sender_email
+        self.api_key = api_key
+        self.sender = sender
+        self.transport = transport
+        self.timeout_seconds = timeout_seconds
 
-    def send_email(self, to, subject, body):
-        message = MIMEText(body, "html")
-        message["from"] = self.sender
-        message["to"] = to
-        message["subject"] = subject
-        email = {"raw": base64.urlsafe_b64encode(message.as_string().encode()).decode()}
+    async def send_email(
+        self,
+        to: str | list[str],
+        subject: str,
+        html: str,
+        *,
+        text: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> str:
+        payload: dict[str, Any] = {
+            "from": self.sender,
+            "to": [to] if isinstance(to, str) else list(to),
+            "subject": subject,
+            "html": html,
+        }
+        if text is not None:
+            payload["text"] = text
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key
+
         try:
-            sent_info = (
-                self.service.users().messages().send(userId=self.sender_email, body=email).execute()
-            )
-            return sent_info
-        except Exception as e:
-            reason = getattr(e, "message", None)
-            self.logger.error(
-                "Failed to send email. Reason = {reason}".format(
-                    reason=(reason if reason else str(e))
-                )
-            )
-            raise e
+            async with httpx.AsyncClient(
+                transport=self.transport, timeout=self.timeout_seconds
+            ) as client:
+                response = await client.post(RESEND_API_URL, json=payload, headers=headers)
+        except httpx.HTTPError as e:
+            self.logger.error(f"Failed to reach Resend for email {subject!r}: {e}")
+            raise EmailSendError(f"Could not reach Resend: {e}") from e
+
+        if response.is_success:
+            return str(response.json()["id"])
+
+        # Recipients aren't logged: they're personal data
+        reason = _error_message(response)
+        self.logger.error(f"Resend rejected email {subject!r}: {response.status_code} {reason}")
+        raise EmailSendError(
+            f"Resend returned {response.status_code}: {reason}", status_code=response.status_code
+        )
+
+
+def _error_message(response: httpx.Response) -> str:
+    """Resend errors are JSON with a message; fall back to the raw body."""
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text
+    if isinstance(body, dict) and body.get("message"):
+        return str(body["message"])
+    return response.text

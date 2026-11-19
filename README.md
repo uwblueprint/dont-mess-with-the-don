@@ -282,6 +282,17 @@ API responses return resolved URLs only (never keys), in the fields `headline_im
 
 The backend builds some links that point at the frontend (for example event check-in links). It reads the frontend's base URL from `FRONTEND_URL` in the root `.env`, defaulting to `http://localhost:3000`. Set it in every deployed environment, e.g. `FRONTEND_URL=https://<frontend domain>`.
 
+## Email (Resend)
+
+Emails are sent through [Resend](https://resend.com) by `ResendEmailService` (`backend/python/app/services/implementations/email_service.py`). Get it with `get_email_service()` and call `await send_email(to, subject, html, text=..., idempotency_key=...)`. It returns Resend's email id, or raises `EmailSendError` (with `status_code`, e.g. `429` when rate limited). Pass an `idempotency_key` from scheduled jobs (e.g. `reminder/<registration id>`) so a retried run can't send the same email twice.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `RESEND_API_KEY` | in production | From Resend's API keys page. Without it, development and testing log emails instead of sending them (`LoggingEmailService`). |
+| `EMAIL_FROM` | with the key | Sender, e.g. `Don't Mess With The Don <noreply@yourdomain>`. The domain must be verified in Resend (DNS records). Before that, `onboarding@resend.dev` only delivers to the Resend account owner's own address; `delivered@resend.dev` is a safe test recipient. |
+
+Resend allows 10 requests per second by default.
+
 ## Strikes
 
 People get strikes for missing events. They're stored in the `strikes` table and expire after a set time. Settings, all optional, in the root `.env`:

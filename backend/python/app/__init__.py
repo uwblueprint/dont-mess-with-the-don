@@ -4,7 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.dependencies.services import get_scheduler_service, get_storage_service
+from app.dependencies.services import (
+    get_email_service,
+    get_scheduler_service,
+    get_storage_service,
+)
 from app.services.jobs import init_jobs
 
 from .config import settings
@@ -17,10 +21,11 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan management"""
     init_models()
 
-    # In production, a missing R2 setting fails the deploy instead of the first request.
-    # Dev/test stay lazy and fall back to placeholder URLs when R2 is not configured.
+    # In production, a missing R2 or Resend setting fails the deploy instead of the first
+    # request. Dev/test stay lazy and fall back to placeholder URLs and logged emails.
     if settings.is_production:
         get_storage_service()
+        get_email_service()
 
     # Initialize scheduler
     scheduler_service = get_scheduler_service()

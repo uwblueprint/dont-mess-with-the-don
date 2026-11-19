@@ -53,10 +53,13 @@ class EventService:
 
         return event
 
-    async def _default_notification_body(
+    async def default_notification_body(
         self, session: AsyncSession, event_type_id: UUID | None
     ) -> str | None:
-        """Most recent non-empty blast for this type, else the type's default."""
+        """Most recent non-empty blast for this type, else the type's default.
+
+        Also used by the recurring-event job, so generated events get the same default.
+        """
         if event_type_id is None:
             return None
 
@@ -83,7 +86,7 @@ class EventService:
             data = event_data.model_dump()
             provided = data.get("notification_body")
             if provided is None or not provided.strip():
-                data["notification_body"] = await self._default_notification_body(
+                data["notification_body"] = await self.default_notification_body(
                     session, event_data.event_type_id
                 )
             else:

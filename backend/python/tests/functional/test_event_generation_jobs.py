@@ -10,6 +10,7 @@ from app.config import settings
 from app.models.enum import EventRegistrationTypeEnum
 from app.models.event import Event
 from app.models.event_series import EventSeries
+from app.models.event_type import EventType
 from app.models.waiver_template import WaiverTemplate
 from app.services.jobs.event_generation_jobs import generate_recurring_events
 
@@ -113,3 +114,30 @@ async def test_events_copy_the_series_waiver_when_generated(job_session_maker, m
         old_waiver.id,
         new_waiver.id,
     ]
+
+
+async def test_generated_events_get_the_default_notification_body(job_session_maker, monkeypatch):
+    monkeypatch.setattr(settings, "event_generation_horizon_days", 1)
+    event_type = EventType(
+        name="Cleanup",
+        headline_image_key="event-images/cleanup.jpg",
+        description="d",
+        location="Don Valley",
+        max_attendees=20,
+        notification_body="Bring water and gloves",
+    )
+    async with job_session_maker() as session:
+        session.add(event_type)
+        await session.flush()
+        session.add(make_series(event_type_id=event_type.id))
+        session.add(make_series(name="No type"))
+        await session.commit()
+
+    await generate_recurring_events(datetime(2026, 1, 2, 9))
+
+    async with job_session_maker() as session:
+        events = list((await session.execute(select(Event))).scalars())
+    with_type = [e.notification_body for e in events if e.event_type_id == event_type.id]
+    without_type = [e.notification_body for e in events if e.event_type_id is None]
+    assert with_type and all(body == "Bring water and gloves" for body in with_type)
+    assert without_type and all(body is None for body in without_type)

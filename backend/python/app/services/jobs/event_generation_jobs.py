@@ -8,7 +8,7 @@ from sqlmodel import col, select
 
 from app import models
 from app.config import settings
-from app.dependencies.services import get_logger
+from app.dependencies.services import get_event_service, get_logger
 from app.models.event import Event
 from app.models.event_series import EventSeries
 
@@ -32,7 +32,9 @@ def occurrence_datetimes(
     return list(rule.between(window_start, window_end, inc=True))
 
 
-def _event_from_series(series: EventSeries, start_datetime: datetime) -> Event:
+def _event_from_series(
+    series: EventSeries, start_datetime: datetime, notification_body: str | None
+) -> Event:
     """Create one dated event from the fields shared by an event series."""
     end_datetime = datetime.combine(start_datetime.date(), series.end_time)
     if end_datetime <= start_datetime:
@@ -51,6 +53,7 @@ def _event_from_series(series: EventSeries, start_datetime: datetime) -> Event:
         notes=series.notes,
         event_series_id=series.id,
         waiver_template_id=series.waiver_template_id,
+        notification_body=notification_body,
     )
 
 
@@ -99,10 +102,16 @@ async def generate_recurring_events(now: datetime | None = None) -> int:
                 )
                 existing_starts = set(existing_result.scalars().all())
 
+                # Same default message POST /events would give (newest of this type, else
+                # the type's own default)
+                notification_body = await get_event_service().default_notification_body(
+                    session, series.event_type_id
+                )
+
                 for start_datetime in starts:
                     if start_datetime in existing_starts:
                         continue
-                    session.add(_event_from_series(series, start_datetime))
+                    session.add(_event_from_series(series, start_datetime, notification_body))
                     created_count += 1
 
             await session.commit()
