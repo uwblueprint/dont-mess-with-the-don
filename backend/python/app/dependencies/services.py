@@ -5,12 +5,14 @@ from app.config import Settings, settings
 from app.services.implementations.attendance_service import AttendanceService
 from app.services.implementations.check_in_service import CheckInService
 from app.services.implementations.confirmation_request_service import ConfirmationRequestService
+from app.services.implementations.email_service import ResendEmailService
 from app.services.implementations.entity_service import EntityService
 from app.services.implementations.event_series_service import EventSeriesService
 from app.services.implementations.event_service import EventService
 from app.services.implementations.event_type_service import EventTypeService
 from app.services.implementations.form_submission_service import FormSubmissionService
 from app.services.implementations.form_template_service import FormTemplateService
+from app.services.implementations.logging_email_service import LoggingEmailService
 from app.services.implementations.registration_service import RegistrationService
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
@@ -18,6 +20,7 @@ from app.services.implementations.storage_service import R2StorageService
 from app.services.implementations.strike_service import StrikeService
 from app.services.implementations.unconfigured_storage_service import UnconfiguredStorageService
 from app.services.implementations.user_service import UserService
+from app.services.interfaces.email_service import IEmailService
 from app.services.interfaces.storage_service import IStorageService
 
 
@@ -145,6 +148,23 @@ def build_storage_service(logger: logging.Logger, app_settings: Settings) -> ISt
 def get_storage_service() -> IStorageService:
     """Get storage service instance (bucket/credentials come from settings)"""
     return build_storage_service(get_logger(), settings)
+
+
+def build_email_service(logger: logging.Logger, app_settings: Settings) -> IEmailService:
+    """Resend when RESEND_API_KEY is set. Outside production, no key logs emails instead.
+
+    Production always builds Resend, so a missing key or sender fails there.
+    """
+    if not app_settings.resend_api_key and not app_settings.is_production:
+        logger.warning("RESEND_API_KEY is not set; emails will be logged, not sent")
+        return LoggingEmailService(logger)
+    return ResendEmailService(logger, app_settings.resend_api_key, app_settings.email_from)
+
+
+@lru_cache
+def get_email_service() -> IEmailService:
+    """Get email service instance (API key and sender come from settings)"""
+    return build_email_service(get_logger(), settings)
 
 
 @lru_cache

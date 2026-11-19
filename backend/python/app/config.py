@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     # Event check-in opens this many minutes before an event starts, and closes when it ends
     check_in_opens_minutes_before: int = Field(default=15)
 
+    # Email (Resend). Without an API key, development and testing log emails instead of
+    # sending them; production requires both settings.
+    resend_api_key: str = Field(default="")
+    # The "from" address, e.g. "Don't Mess With The Don <noreply@example.org>". Its domain
+    # must be verified in Resend.
+    email_from: str = Field(default="")
+
     # Strikes
     # A no-show strike is given this long after an event ends with no check-in
     strike_no_show_grace_minutes: int = Field(default=60)
