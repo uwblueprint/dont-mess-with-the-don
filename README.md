@@ -282,6 +282,17 @@ API responses return resolved URLs only (never keys), in the fields `headline_im
 
 The backend builds some links that point at the frontend (for example event check-in links). It reads the frontend's base URL from `FRONTEND_URL` in the root `.env`, defaulting to `http://localhost:3000`. Set it in every deployed environment, e.g. `FRONTEND_URL=https://<frontend domain>`.
 
+## Strikes
+
+People get strikes for missing events. They're stored in the `strikes` table and expire after a set time. Settings, all optional, in the root `.env`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `STRIKE_NO_SHOW_GRACE_MINUTES` | `60` | How long after an event ends, with no check-in, before a no-show strike is given |
+| `STRIKE_LATE_CANCELLATION_HOURS` | `48` | Cancelling less than this many hours before the start gives a strike |
+| `STRIKE_EXPIRY_MONTHS` | `6` | Strikes expire this many months after the event's start |
+| `STRIKE_NO_SHOW_START` | unset | Only events ending at or after this time (e.g. `2026-12-01T00:00:00`) give no-show strikes. Unset means no-show strikes are off. Set it to when check-in goes live, since attendance wasn't recorded before that. |
+
 ## Auth
 
 Logins are handled by Firebase Auth (the dev project is `dmwtd-dev`). The frontend signs people in with the Firebase SDK (`frontend/src/firebase.ts`) and sends their Firebase ID token on every request as `Authorization: Bearer <token>`. The backend checks it in `backend/python/app/dependencies/auth.py` and only needs `FIREBASE_PROJECT_ID` in the root `.env` (no service-account key).

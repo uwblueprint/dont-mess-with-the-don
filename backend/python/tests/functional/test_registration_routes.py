@@ -27,12 +27,9 @@ async def test_eligible_signup_creates_pending_confirmation_request(client):
         assert response.status_code == 201
         return response.json()["id"]
 
-    for days_ago in (30, 15):
-        event_id = await create_event(now - timedelta(days=days_ago))
-        response = await client.post(
-            BASE,
-            json={"user_id": user_id, "event_instance_id": event_id, "status": "accepted"},
-        )
+    # Two active strikes mean every new signup needs confirming
+    for note in ("Missed cleanup", "Missed hockey"):
+        response = await client.post("/strikes", json={"user_id": user_id, "note": note})
         assert response.status_code == 201
 
     event_start = now + timedelta(days=14)
@@ -91,12 +88,9 @@ async def test_late_eligible_signup_gets_deadline_24h_after_signup(client):
         assert response.status_code == 201
         return response.json()["id"]
 
-    for days_ago in (30, 15):
-        event_id = await create_event(now - timedelta(days=days_ago))
-        response = await client.post(
-            BASE,
-            json={"user_id": user_id, "event_instance_id": event_id, "status": "accepted"},
-        )
+    # Two active strikes mean every new signup needs confirming
+    for note in ("Missed cleanup", "Missed hockey"):
+        response = await client.post("/strikes", json={"user_id": user_id, "note": note})
         assert response.status_code == 201
 
     # 48h out, so the usual 72h-before deadline would already have passed

@@ -31,6 +31,12 @@ class SimpleEntityEnum(str, Enum):
     D = "D"
 
 
+class StrikeReasonEnum(str, Enum):
+    NO_SHOW = "no_show"
+    LATE_CANCELLATION = "late_cancellation"
+    MANUAL = "manual"
+
+
 class RegistrationStatusEnum(str, Enum):
     ACCEPTED = "accepted"
     CANCELLED = "cancelled"

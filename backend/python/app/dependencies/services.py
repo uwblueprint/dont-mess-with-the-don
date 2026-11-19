@@ -15,6 +15,7 @@ from app.services.implementations.registration_service import RegistrationServic
 from app.services.implementations.scheduler_service import SchedulerService
 from app.services.implementations.simple_entity_service import SimpleEntityService
 from app.services.implementations.storage_service import R2StorageService
+from app.services.implementations.strike_service import StrikeService
 from app.services.implementations.unconfigured_storage_service import UnconfiguredStorageService
 from app.services.implementations.user_service import UserService
 from app.services.interfaces.storage_service import IStorageService
@@ -94,6 +95,13 @@ def get_check_in_service() -> CheckInService:
     """Get check-in service instance"""
     logger = get_logger()
     return CheckInService(logger)
+
+
+@lru_cache
+def get_strike_service() -> StrikeService:
+    """Get strike service instance"""
+    logger = get_logger()
+    return StrikeService(logger)
 
 
 @lru_cache

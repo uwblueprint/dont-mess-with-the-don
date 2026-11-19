@@ -13,10 +13,16 @@ def init_jobs(scheduler_service: SchedulerService) -> None:
     3. Import and register it here
     """
     from .event_generation_jobs import generate_recurring_events
+    from .strike_jobs import issue_no_show_strikes
 
     scheduler_service.add_cron_job(
         generate_recurring_events,
         job_id="generate_recurring_events",
         hour=0,
         minute=5,
+    )
+    scheduler_service.add_cron_job(
+        issue_no_show_strikes,
+        job_id="issue_no_show_strikes",
+        minute="*/15",
     )

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -40,6 +41,17 @@ class Settings(BaseSettings):
 
     # Event check-in opens this many minutes before an event starts, and closes when it ends
     check_in_opens_minutes_before: int = Field(default=15)
+
+    # Strikes
+    # A no-show strike is given this long after an event ends with no check-in
+    strike_no_show_grace_minutes: int = Field(default=60)
+    # Cancelling less than this many hours before an event's start gives a strike
+    strike_late_cancellation_hours: int = Field(default=48)
+    # Strikes expire this many months after the event's start
+    strike_expiry_months: int = Field(default=6)
+    # Only events ending at or after this time can give no-show strikes. Unset means none do,
+    # since attendance wasn't recorded before check-in existed.
+    strike_no_show_start: datetime | None = Field(default=None)
 
     @property
     def is_development(self) -> bool:
