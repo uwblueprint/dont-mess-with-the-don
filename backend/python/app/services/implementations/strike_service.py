@@ -61,19 +61,42 @@ class StrikeService:
 
         Returns None, without error, if the registration already has a strike.
         """
+        assert registration.id is not None
+        return await self._stage_registration_strike(
+            session,
+            registration_id=registration.id,
+            user_id=registration.user_id,
+            event_id=event.id,
+            event_start=event.start_datetime,
+            reason=reason,
+            now=now,
+        )
+
+    async def _stage_registration_strike(
+        self,
+        session: AsyncSession,
+        *,
+        registration_id: int,
+        user_id: int,
+        event_id: UUID,
+        event_start: datetime,
+        reason: StrikeReasonEnum,
+        now: datetime,
+    ) -> Strike | None:
+        # Takes plain values, not ORM rows, so callers can keep going after a rollback
         existing = await session.execute(
-            select(Strike.id).where(Strike.registration_id == registration.id)
+            select(Strike.id).where(Strike.registration_id == registration_id)
         )
         if existing.first() is not None:
             return None
 
         strike = Strike(
-            user_id=registration.user_id,
-            event_id=event.id,
-            registration_id=registration.id,
+            user_id=user_id,
+            event_id=event_id,
+            registration_id=registration_id,
             reason=reason,
             created_at=now,
-            expires_at=strike_expires_at(event.start_datetime, now),
+            expires_at=strike_expires_at(event_start, now),
         )
         session.add(strike)
         return strike
@@ -120,8 +143,15 @@ class StrikeService:
             col(Attendance.attended_at).is_not(None),
         )
         has_strike = exists().where(col(Strike.registration_id) == col(Registration.id))
+        # Plain column values, not ORM rows: a rollback after a collision expires every
+        # loaded row, and reading an expired row's attributes would crash the loop
         statement = (
-            select(Registration, Event)
+            select(
+                col(Registration.id),
+                col(Registration.user_id),
+                col(Event.id),
+                col(Event.start_datetime),
+            )
             .join(Event, col(Event.id) == col(Registration.event_instance_id))
             .where(
                 Registration.status == RegistrationStatusEnum.ACCEPTED,
@@ -135,9 +165,15 @@ class StrikeService:
         rows = (await session.execute(statement)).all()
 
         issued = 0
-        for registration, event in rows:
-            strike = await self.add_registration_strike(
-                session, registration, event, StrikeReasonEnum.NO_SHOW, now
+        for registration_id, user_id, event_id, event_start in rows:
+            strike = await self._stage_registration_strike(
+                session,
+                registration_id=registration_id,
+                user_id=user_id,
+                event_id=event_id,
+                event_start=event_start,
+                reason=StrikeReasonEnum.NO_SHOW,
+                now=now,
             )
             if strike is None:
                 continue

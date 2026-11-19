@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from app.config import settings
@@ -144,3 +145,32 @@ async def test_running_twice_does_not_duplicate(db_session, service, registratio
     assert await service.issue_no_show_strikes(db_session, now=NOW) == 2
     assert await service.issue_no_show_strikes(db_session, now=NOW) == 0
     assert len(await _strikes(db_session)) == 2
+
+
+async def test_a_colliding_run_does_not_stop_the_rest(
+    db_session, service, registration_for_event, monkeypatch
+):
+    # Another run inserts the first registration's strike between our check and our commit,
+    # so our commit fails on the unique constraint and rolls back (expiring loaded rows)
+    first = await registration_for_event()
+    second = await registration_for_event()
+    await db_session.commit()
+    registration_ids = {first.id, second.id}
+    real_commit = db_session.commit
+    commits = 0
+
+    async def commit_that_collides_once():
+        nonlocal commits
+        commits += 1
+        if commits == 1:
+            raise IntegrityError("INSERT INTO strikes", {}, Exception("unique violation"))
+        await real_commit()
+
+    monkeypatch.setattr(db_session, "commit", commit_that_collides_once)
+
+    issued = await service.issue_no_show_strikes(db_session, now=NOW)
+
+    assert issued == 1
+    strikes = await _strikes(db_session)
+    assert len(strikes) == 1
+    assert strikes[0].registration_id in registration_ids
