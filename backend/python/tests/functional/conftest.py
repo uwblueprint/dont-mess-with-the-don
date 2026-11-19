@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -13,7 +14,10 @@ from app import create_app
 from app.dependencies.auth import get_current_user, get_optional_user
 from app.dependencies.services import get_storage_service
 from app.models import get_session
-from app.models.enum import BucketVisibility, UserRole
+from app.models.enum import BucketVisibility, RegistrationStatusEnum, StrikeReasonEnum, UserRole
+from app.models.event import Event
+from app.models.registration import Registration
+from app.models.strike import Strike
 from app.models.user import User
 
 # Who every test is logged in as, unless it overrides get_current_user itself
@@ -80,6 +84,104 @@ async def client(app):
 
     app.dependency_overrides.clear()
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    """A session on a fresh in-memory SQLite database, for testing services directly."""
+    from app.models import register_models
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    register_models()
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
+        yield session
+    await engine.dispose()
+
+
+# Factories that insert rows through db_session. Each returns an async function.
+
+
+@pytest.fixture
+def make_user(db_session):
+    count = 0
+
+    async def _make(**fields) -> User:
+        nonlocal count
+        count += 1
+        user = User(**{"email": f"user{count}@example.com", **fields})
+        db_session.add(user)
+        await db_session.flush()
+        return user
+
+    return _make
+
+
+@pytest.fixture
+def make_event(db_session):
+    async def _make(start: datetime, end: datetime | None = None, **fields) -> Event:
+        event = Event(
+            **{
+                "name": "Cleanup",
+                "description": "d",
+                "location": "Toronto",
+                "max_attendees": 10,
+                "event_status": "published",
+                "headline_image_key": "event-images/cleanup.jpg",
+                "start_datetime": start,
+                "end_datetime": end or start + timedelta(hours=2),
+                **fields,
+            }
+        )
+        db_session.add(event)
+        await db_session.flush()
+        return event
+
+    return _make
+
+
+@pytest.fixture
+def make_registration(db_session):
+    async def _make(
+        user: User,
+        event: Event,
+        status: RegistrationStatusEnum = RegistrationStatusEnum.ACCEPTED,
+    ) -> Registration:
+        assert user.id is not None
+        registration = Registration(user_id=user.id, event_instance_id=event.id, status=status)
+        db_session.add(registration)
+        await db_session.flush()
+        return registration
+
+    return _make
+
+
+@pytest.fixture
+def make_strike(db_session):
+    async def _make(
+        user: User,
+        expires_at: datetime,
+        revoked_at: datetime | None = None,
+        reason: StrikeReasonEnum = StrikeReasonEnum.MANUAL,
+        registration: Registration | None = None,
+        **fields,
+    ) -> Strike:
+        assert user.id is not None
+        strike = Strike(
+            user_id=user.id,
+            reason=reason,
+            expires_at=expires_at,
+            revoked_at=revoked_at,
+            registration_id=registration.id if registration else None,
+            event_id=registration.event_instance_id if registration else None,
+            **fields,
+        )
+        db_session.add(strike)
+        await db_session.flush()
+        return strike
+
+    return _make
 
 
 # SQLite's driver can't bind/read Python lists directly (unlike psycopg2's native array
