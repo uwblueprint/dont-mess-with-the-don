@@ -13,6 +13,9 @@ from app.models.registration import Registration
 from app.models.strike import Strike
 from app.services.implementations.check_in_service import toronto_now
 
+# People with this many active strikes must confirm before each event (the 72-hour rule)
+STRIKES_REQUIRING_CONFIRMATION = 2
+
 
 def strike_expires_at(event_start: datetime | None, created_at: datetime | None) -> datetime:
     """When a strike expires: a set number of months after the event's start.
@@ -71,3 +74,10 @@ class StrikeService:
         )
         result = await session.execute(statement)
         return result.scalar_one()
+
+    async def requires_confirmation(
+        self, session: AsyncSession, user_id: int, now: datetime | None = None
+    ) -> bool:
+        """Whether this person must confirm their spot before events (2+ active strikes)."""
+        active = await self.count_active_strikes(session, user_id, now)
+        return active >= STRIKES_REQUIRING_CONFIRMATION

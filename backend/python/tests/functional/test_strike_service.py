@@ -125,3 +125,48 @@ async def test_siblings_strikes_are_counted_separately(db_session, service, make
     assert await service.count_active_strikes(db_session, first_child.id, now=NOW) == 1
     assert await service.count_active_strikes(db_session, second_child.id, now=NOW) == 1
     assert await service.count_active_strikes(db_session, guardian.id, now=NOW) == 0
+
+
+# --- requires_confirmation ---
+
+
+async def test_requires_confirmation_flips_at_two_active_strikes(
+    db_session, service, make_user, make_strike
+):
+    user = await make_user()
+    await make_strike(user, expires_at=datetime(2027, 1, 1))
+    await db_session.commit()
+    assert await service.requires_confirmation(db_session, user.id, now=NOW) is False
+
+    await make_strike(user, expires_at=datetime(2027, 1, 1))
+    await db_session.commit()
+    assert await service.requires_confirmation(db_session, user.id, now=NOW) is True
+
+
+async def test_requires_confirmation_flips_back_when_a_strike_is_revoked(
+    db_session, service, make_user, make_strike
+):
+    user = await make_user()
+    await make_strike(user, expires_at=datetime(2027, 1, 1))
+    second = await make_strike(user, expires_at=datetime(2027, 1, 1))
+    await db_session.commit()
+    assert await service.requires_confirmation(db_session, user.id, now=NOW) is True
+
+    second.revoked_at = NOW
+    await db_session.commit()
+    assert await service.requires_confirmation(db_session, user.id, now=NOW) is False
+
+
+async def test_requires_confirmation_flips_back_when_a_strike_expires(
+    db_session, service, make_user, make_strike
+):
+    user = await make_user()
+    await make_strike(user, expires_at=datetime(2027, 1, 1))
+    await make_strike(user, expires_at=datetime(2026, 12, 10))
+    await db_session.commit()
+
+    assert await service.requires_confirmation(db_session, user.id, now=NOW) is True
+    assert (
+        await service.requires_confirmation(db_session, user.id, now=datetime(2026, 12, 10))
+        is False
+    )
