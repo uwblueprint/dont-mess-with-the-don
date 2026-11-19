@@ -1,13 +1,15 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import func
+from sqlalchemy import exists, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
 from app.config import settings
-from app.models.enum import StrikeReasonEnum
+from app.models.attendance import Attendance
+from app.models.enum import RegistrationStatusEnum, StrikeReasonEnum
 from app.models.event import Event
 from app.models.registration import Registration
 from app.models.strike import Strike
@@ -81,3 +83,54 @@ class StrikeService:
         """Whether this person must confirm their spot before events (2+ active strikes)."""
         active = await self.count_active_strikes(session, user_id, now)
         return active >= STRIKES_REQUIRING_CONFIRMATION
+
+    async def issue_no_show_strikes(
+        self, session: AsyncSession, now: datetime | None = None
+    ) -> int:
+        """Give a no-show strike for each accepted registration nobody checked in for.
+
+        Counts events that ended at least the grace period ago, and only those ending at
+        or after strike_no_show_start (attendance wasn't recorded before check-in existed).
+        Returns how many strikes were given.
+        """
+        cutoff = settings.strike_no_show_start
+        if cutoff is None:
+            self.logger.info("strike_no_show_start is unset; not giving no-show strikes")
+            return 0
+        now = now or toronto_now()
+        ended_by = now - timedelta(minutes=settings.strike_no_show_grace_minutes)
+
+        checked_in = exists().where(
+            col(Attendance.user_id) == col(Registration.user_id),
+            col(Attendance.event_instance_id) == col(Registration.event_instance_id),
+            col(Attendance.attended_at).is_not(None),
+        )
+        has_strike = exists().where(col(Strike.registration_id) == col(Registration.id))
+        statement = (
+            select(Registration, Event)
+            .join(Event, col(Event.id) == col(Registration.event_instance_id))
+            .where(
+                Registration.status == RegistrationStatusEnum.ACCEPTED,
+                Event.event_status != "cancelled",
+                col(Event.end_datetime) <= ended_by,
+                col(Event.end_datetime) >= cutoff,
+                ~checked_in,
+                ~has_strike,
+            )
+        )
+        rows = (await session.execute(statement)).all()
+
+        issued = 0
+        for registration, event in rows:
+            strike = await self.add_registration_strike(
+                session, registration, event, StrikeReasonEnum.NO_SHOW, now
+            )
+            if strike is None:
+                continue
+            try:
+                await session.commit()
+                issued += 1
+            except IntegrityError:
+                # Another run gave this registration a strike first
+                await session.rollback()
+        return issued
