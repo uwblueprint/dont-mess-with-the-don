@@ -241,3 +241,59 @@ async def test_revoking_requires_login(app, client):
     )
 
     assert response.status_code == 401
+
+
+# --- GET /users/me/strikes ---
+
+
+async def test_my_strikes_include_my_children_labelled_by_name(app, client):
+    parent = await create_user(client, email="mine@example.com", first_name="Pat", last_name="Lee")
+    child = await create_user(
+        client, profile_type="child", guardian_id=parent["id"], first_name="Kim", last_name="Lee"
+    )
+    stranger = await create_user(client, email="not_mine@example.com", first_name="Sam")
+    own = await give_strike(client, parent["id"], note="Missed cleanup")
+    childs = await give_strike(client, child["id"], note="Missed hockey")
+    await give_strike(client, stranger["id"], note="Not visible to Pat")
+    await client.post(f"/strikes/{own['id']}/revoke", json={"reason": "Excused"})
+    act_as(app, parent)
+
+    response = await client.get("/users/me/strikes")
+
+    assert response.status_code == 200
+    strikes = {s["id"]: s for s in response.json()}
+    assert set(strikes) == {own["id"], childs["id"]}
+    assert (strikes[own["id"]]["first_name"], strikes[own["id"]]["last_name"]) == ("Pat", "Lee")
+    assert strikes[own["id"]]["active"] is False
+    assert (strikes[childs["id"]]["first_name"], strikes[childs["id"]]["user_id"]) == (
+        "Kim",
+        child["id"],
+    )
+    assert strikes[childs["id"]]["active"] is True
+
+
+async def test_my_strikes_are_empty_without_any(app, client):
+    user = await create_user(client, email="clean@example.com")
+    act_as(app, user)
+
+    response = await client.get("/users/me/strikes")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_my_strikes_for_an_admin_are_only_their_own(app, client):
+    admin = await create_user(client, email="admin_user@example.com")
+    other = await create_user(client, email="someone@example.com")
+    await give_strike(client, other["id"])
+    act_as(app, admin, role=UserRole.ADMIN)
+
+    response = await client.get("/users/me/strikes")
+
+    assert response.json() == []
+
+
+async def test_my_strikes_requires_login(app, client):
+    app.dependency_overrides.pop(get_current_user)
+
+    assert (await client.get("/users/me/strikes")).status_code == 401

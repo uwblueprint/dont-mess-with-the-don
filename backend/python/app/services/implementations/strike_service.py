@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import exists, func
+from sqlalchemy import exists, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
@@ -212,3 +212,16 @@ class StrikeService:
         await session.commit()
         await session.refresh(strike)
         return strike
+
+    async def list_for_user_and_children(
+        self, session: AsyncSession, user: User
+    ) -> list[tuple[Strike, User]]:
+        """The user's own strikes and their children's, newest first, with whose each is."""
+        statement = (
+            select(Strike, User)
+            .join(User, col(User.id) == col(Strike.user_id))
+            .where(or_(col(User.id) == user.id, col(User.guardian_id) == user.id))
+            .order_by(col(Strike.created_at).desc())
+        )
+        result = await session.execute(statement)
+        return [(strike, person) for strike, person in result.all()]

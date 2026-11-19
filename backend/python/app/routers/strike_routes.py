@@ -3,10 +3,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies.auth import require_admin
+from app.dependencies.auth import get_current_user, require_admin
 from app.dependencies.services import get_strike_service
 from app.models import get_session
-from app.models.strike import StrikeCreate, StrikeRead, StrikeRevoke
+from app.models.strike import StrikeCreate, StrikeRead, StrikeRevoke, StrikeWithUserRead
 from app.models.user import User
 from app.services.implementations.check_in_service import toronto_now
 from app.services.implementations.strike_service import (
@@ -67,3 +67,22 @@ async def revoke_strike(
     except StrikeAlreadyRevokedError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     return StrikeRead.from_strike(strike, toronto_now())
+
+
+@router.get("/users/me/strikes", response_model=list[StrikeWithUserRead])
+async def get_my_strikes(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    strike_service: StrikeService = Depends(get_strike_service),
+) -> list[StrikeWithUserRead]:
+    """The caller's own strikes and their children's, each labelled with the person's name"""
+    rows = await strike_service.list_for_user_and_children(session, current_user)
+    now = toronto_now()
+    return [
+        StrikeWithUserRead(
+            **StrikeRead.from_strike(strike, now).model_dump(),
+            first_name=person.first_name,
+            last_name=person.last_name,
+        )
+        for strike, person in rows
+    ]
