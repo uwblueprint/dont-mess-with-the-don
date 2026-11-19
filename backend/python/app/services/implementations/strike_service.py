@@ -12,11 +12,16 @@ from app.models.attendance import Attendance
 from app.models.enum import RegistrationStatusEnum, StrikeReasonEnum
 from app.models.event import Event
 from app.models.registration import Registration
-from app.models.strike import Strike
+from app.models.strike import Strike, StrikeCreate
+from app.models.user import User
 from app.services.implementations.check_in_service import toronto_now
 
 # People with this many active strikes must confirm before each event (the 72-hour rule)
 STRIKES_REQUIRING_CONFIRMATION = 2
+
+
+class StrikeTargetNotFoundError(ValueError):
+    """The user or event a manual strike refers to does not exist."""
 
 
 def strike_expires_at(event_start: datetime | None, created_at: datetime | None) -> datetime:
@@ -134,3 +139,31 @@ class StrikeService:
                 # Another run gave this registration a strike first
                 await session.rollback()
         return issued
+
+    async def create_manual_strike(
+        self, session: AsyncSession, data: StrikeCreate, issued_by: int, now: datetime | None = None
+    ) -> Strike:
+        """Give a strike by hand. It isn't tied to a registration."""
+        now = now or toronto_now()
+        if await session.get(User, data.user_id) is None:
+            raise StrikeTargetNotFoundError(f"User {data.user_id} does not exist")
+        event_start = None
+        if data.event_id is not None:
+            event = await session.get(Event, data.event_id)
+            if event is None:
+                raise StrikeTargetNotFoundError(f"Event {data.event_id} does not exist")
+            event_start = event.start_datetime
+
+        strike = Strike(
+            user_id=data.user_id,
+            event_id=data.event_id,
+            reason=StrikeReasonEnum.MANUAL,
+            note=data.note,
+            issued_by=issued_by,
+            created_at=now,
+            expires_at=strike_expires_at(event_start, now),
+        )
+        session.add(strike)
+        await session.commit()
+        await session.refresh(strike)
+        return strike

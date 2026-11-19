@@ -48,6 +48,13 @@ class StrikeRead(StrikeBase):
     # Not revoked and not expired
     active: bool
 
+    @classmethod
+    def from_strike(cls, strike: Strike, now: datetime) -> "StrikeRead":
+        return cls(
+            **strike.model_dump(),
+            active=strike.revoked_at is None and strike.expires_at > now,
+        )
+
 
 class StrikeWithUserRead(StrikeRead):
     """A strike labelled with the name of the person it belongs to"""
