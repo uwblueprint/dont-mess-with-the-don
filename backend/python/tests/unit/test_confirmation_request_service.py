@@ -155,7 +155,7 @@ async def test_late_signup_request_uses_deadline_from_signup_time():
     session.add = Mock()
     session.get.return_value = Mock(start_datetime=EVENT_START)
     service = ConfirmationRequestService(Mock())
-    service.requires_positive_confirmation = AsyncMock(return_value=True)  # type: ignore[method-assign]
+    service.strike_service.requires_confirmation = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
     await service.add_for_registration_if_required(session, registration)
 
@@ -164,3 +164,16 @@ async def test_late_signup_request_uses_deadline_from_signup_time():
     assert isinstance(request, ConfirmationRequest)
     assert request.registration_id == 7
     assert request.deadline == signed_up_at + timedelta(hours=24)
+
+
+async def test_signup_without_two_active_strikes_creates_no_request():
+    registration = Registration(id=8, user_id=43, event_instance_id=uuid4(), status="accepted")
+    session = AsyncMock(spec=AsyncSession)
+    session.add = Mock()
+    service = ConfirmationRequestService(Mock())
+    service.strike_service.requires_confirmation = AsyncMock(return_value=False)  # type: ignore[method-assign]
+
+    await service.add_for_registration_if_required(session, registration)
+
+    service.strike_service.requires_confirmation.assert_awaited_once_with(session, 43)
+    session.add.assert_not_called()

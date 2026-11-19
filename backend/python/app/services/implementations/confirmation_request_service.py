@@ -18,6 +18,7 @@ from app.models.confirmation_requests import (
 from app.models.enum import ConfirmationRequestStatusEnum, RegistrationStatusEnum
 from app.models.event import Event
 from app.models.registration import Registration
+from app.services.implementations.strike_service import StrikeService
 from app.services.interfaces.confirmation_request_service import IConfirmationRequestService
 
 MIN_STRIKES_FOR_CONFIRMATION = 2
@@ -52,6 +53,7 @@ class ConfirmationRequestService(IConfirmationRequestService):
 
     def __init__(self, logger: logging.Logger):
         self.logger = logger
+        self.strike_service = StrikeService(logger)
 
     async def get_confirmation_requests(
         self, session: AsyncSession, event_id: UUID | None = None
@@ -131,7 +133,7 @@ class ConfirmationRequestService(IConfirmationRequestService):
         self, session: AsyncSession, registration: Registration
     ) -> None:
         """Stage a pending request for an eligible signup in its registration transaction."""
-        if not await self.requires_positive_confirmation(session, registration.user_id):
+        if not await self.strike_service.requires_confirmation(session, registration.user_id):
             return
 
         event = await session.get(Event, registration.event_instance_id)
