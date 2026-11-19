@@ -1,14 +1,18 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.models.enum import RegistrationStatusEnum
+from app.config import settings
+from app.models.enum import RegistrationStatusEnum, StrikeReasonEnum
+from app.models.event import Event
 from app.models.registration import Registration, RegistrationCreate, RegistrationUpdate
+from app.services.implementations.check_in_service import toronto_now
 from app.services.implementations.confirmation_request_service import ConfirmationRequestService
+from app.services.implementations.strike_service import StrikeService
 from app.services.interfaces.registration_service import IRegistrationService
 
 
@@ -18,6 +22,7 @@ class RegistrationService(IRegistrationService):
     def __init__(self, logger: logging.Logger):
         self.logger = logger
         self.confirmation_request_service = ConfirmationRequestService(logger)
+        self.strike_service = StrikeService(logger)
 
     async def get_registrations(
         self,
@@ -104,9 +109,17 @@ class RegistrationService(IRegistrationService):
                         f"to {registration_data.status.value}"
                     )
 
+            is_cancelling = (
+                registration_data.status == RegistrationStatusEnum.CANCELLED
+                and registration.status != RegistrationStatusEnum.CANCELLED
+            )
+
             update_data = registration_data.model_dump(exclude_unset=True)
             for field, value in update_data.items():
                 setattr(registration, field, value)
+
+            if is_cancelling:
+                await self._record_cancellation(session, registration)
 
             registration.updated_at = datetime.now(ZoneInfo("America/Toronto")).replace(tzinfo=None)
 
@@ -117,6 +130,22 @@ class RegistrationService(IRegistrationService):
             self.logger.error(f"Failed to update registration: {error!s}")
             await session.rollback()
             raise error
+
+    async def _record_cancellation(self, session: AsyncSession, registration: Registration) -> None:
+        """Set cancelled_at and is_late_cancellation, and stage a strike if it was late."""
+        now = toronto_now()
+        cancelled_at = registration.cancelled_at or now
+        registration.cancelled_at = cancelled_at
+
+        event = await session.get(Event, registration.event_instance_id)
+        late_cutoff = timedelta(hours=settings.strike_late_cancellation_hours)
+        registration.is_late_cancellation = (
+            event is not None and event.start_datetime - cancelled_at < late_cutoff
+        )
+        if event is not None and registration.is_late_cancellation:
+            await self.strike_service.add_registration_strike(
+                session, registration, event, StrikeReasonEnum.LATE_CANCELLATION, now
+            )
 
     async def delete_registration(self, session: AsyncSession, registration_id: int) -> bool:
         """Delete registration by ID"""
