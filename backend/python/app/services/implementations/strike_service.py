@@ -2,8 +2,14 @@ import logging
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.config import settings
+from app.models.enum import StrikeReasonEnum
+from app.models.event import Event
+from app.models.registration import Registration
+from app.models.strike import Strike
 from app.services.implementations.check_in_service import toronto_now
 
 
@@ -22,3 +28,32 @@ class StrikeService:
 
     def __init__(self, logger: logging.Logger):
         self.logger = logger
+
+    async def add_registration_strike(
+        self,
+        session: AsyncSession,
+        registration: Registration,
+        event: Event,
+        reason: StrikeReasonEnum,
+        now: datetime,
+    ) -> Strike | None:
+        """Stage a system strike for a registration; the caller commits.
+
+        Returns None, without error, if the registration already has a strike.
+        """
+        existing = await session.execute(
+            select(Strike.id).where(Strike.registration_id == registration.id)
+        )
+        if existing.first() is not None:
+            return None
+
+        strike = Strike(
+            user_id=registration.user_id,
+            event_id=event.id,
+            registration_id=registration.id,
+            reason=reason,
+            created_at=now,
+            expires_at=strike_expires_at(event.start_datetime, now),
+        )
+        session.add(strike)
+        return strike
