@@ -2,8 +2,9 @@ import logging
 from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, select
 
 from app.config import settings
 from app.models.enum import StrikeReasonEnum
@@ -57,3 +58,16 @@ class StrikeService:
         )
         session.add(strike)
         return strike
+
+    async def count_active_strikes(
+        self, session: AsyncSession, user_id: int, now: datetime | None = None
+    ) -> int:
+        """Strikes for this one person that aren't revoked and haven't expired."""
+        now = now or toronto_now()
+        statement = select(func.count(col(Strike.id))).where(
+            Strike.user_id == user_id,
+            col(Strike.revoked_at).is_(None),
+            col(Strike.expires_at) > now,
+        )
+        result = await session.execute(statement)
+        return result.scalar_one()

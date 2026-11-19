@@ -86,3 +86,42 @@ async def test_second_strike_for_same_registration_is_skipped(
 
     assert second is None
     assert len(await _strikes(db_session)) == 1
+
+
+# --- count_active_strikes ---
+
+
+async def test_counts_only_strikes_that_are_not_revoked_or_expired(
+    db_session, service, make_user, make_strike
+):
+    user = await make_user()
+    await make_strike(user, expires_at=datetime(2027, 1, 1))  # active
+    await make_strike(user, expires_at=datetime(2027, 2, 1))  # active
+    await make_strike(user, expires_at=datetime(2027, 1, 1), revoked_at=datetime(2026, 11, 1))
+    await make_strike(user, expires_at=datetime(2026, 11, 30))  # expired before NOW
+    await db_session.commit()
+
+    assert await service.count_active_strikes(db_session, user.id, now=NOW) == 2
+
+
+async def test_strike_stops_counting_the_moment_it_expires(
+    db_session, service, make_user, make_strike
+):
+    user = await make_user()
+    await make_strike(user, expires_at=NOW)
+    await db_session.commit()
+
+    assert await service.count_active_strikes(db_session, user.id, now=NOW) == 0
+
+
+async def test_siblings_strikes_are_counted_separately(db_session, service, make_user, make_strike):
+    guardian = await make_user()
+    first_child = await make_user(email=None, profile_type="child", guardian_id=guardian.id)
+    second_child = await make_user(email=None, profile_type="child", guardian_id=guardian.id)
+    await make_strike(first_child, expires_at=datetime(2027, 1, 1))
+    await make_strike(second_child, expires_at=datetime(2027, 1, 1))
+    await db_session.commit()
+
+    assert await service.count_active_strikes(db_session, first_child.id, now=NOW) == 1
+    assert await service.count_active_strikes(db_session, second_child.id, now=NOW) == 1
+    assert await service.count_active_strikes(db_session, guardian.id, now=NOW) == 0
