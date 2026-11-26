@@ -8,7 +8,7 @@ import { getAuthErrorMessage } from "../../utils/AuthUtils";
 
 // Admins and attendees log in here; where they land depends on their role
 const LoginPage = (): React.ReactElement => {
-  const { logIn, logInWithGoogle } = useAuth();
+  const { logIn, logInWithGoogle, sessionError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,9 @@ const LoginPage = (): React.ReactElement => {
             />
           </label>
         </div>
-        {error && <div className="alert alert-danger">{error}</div>}
+        {(error || sessionError) && (
+          <div className="alert alert-danger">{error ?? sessionError}</div>
+        )}
         <button
           className="btn btn-primary btn-block"
           type="submit"
