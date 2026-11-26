@@ -27,6 +27,8 @@ type AuthContextValue = {
   status: AuthStatus;
   // Our profile from GET /users/me; null until status is "signedIn"
   user: AuthenticatedUser | null;
+  // Set when we had to sign someone out because /users/me failed; shown on login
+  sessionError: string | null;
   logIn: (email: string, password: string) => Promise<void>;
   logInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -43,6 +45,7 @@ export const AuthProvider = ({
 }): React.ReactElement => {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   // Firebase keeps the session across reloads; on every sign-in or sign-out
   // load our profile for that account
@@ -61,6 +64,7 @@ export const AuthProvider = ({
           setStatus(me ? "signedIn" : "needsProfile");
         } catch {
           // Backend unreachable or token rejected: don't leave a half signed-in state
+          setSessionError("Couldn't reach the server. Please try again.");
           await signOut(auth);
         }
       }),
@@ -68,14 +72,17 @@ export const AuthProvider = ({
   );
 
   const logIn = useCallback(async (email: string, password: string) => {
+    setSessionError(null);
     await signInWithEmailAndPassword(auth, email, password);
   }, []);
 
   const logInWithGoogle = useCallback(async () => {
+    setSessionError(null);
     await signInWithPopup(auth, new GoogleAuthProvider());
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
+    setSessionError(null);
     await createUserWithEmailAndPassword(auth, email, password);
   }, []);
 
@@ -93,13 +100,23 @@ export const AuthProvider = ({
     () => ({
       status,
       user,
+      sessionError,
       logIn,
       logInWithGoogle,
       signUp,
       completeProfile,
       logOut,
     }),
-    [status, user, logIn, logInWithGoogle, signUp, completeProfile, logOut],
+    [
+      status,
+      user,
+      sessionError,
+      logIn,
+      logInWithGoogle,
+      signUp,
+      completeProfile,
+      logOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
